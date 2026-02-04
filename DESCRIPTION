@@ -1,4 +1,4 @@
-Package: tinylens
+Package: tidylens
 Title: Tidy Image Analysis for Digital Humanities
 Version: 0.1.0
 Author: Nabeel Siddiqui [aut, cre]
@@ -37,5 +37,5 @@ Suggests:
     rmarkdown
 Config/testthat/edition: 3
 VignetteBuilder: knitr
-URL: https://github.com/nabsiddiqui/tinylens
-BugReports: https://github.com/nabsiddiqui/tinylens/issues
+URL: https://github.com/nabsiddiqui/tidylens
+BugReports: https://github.com/nabsiddiqui/tidylens/issues

@@ -1,6 +1,6 @@
 #' LLM Setup Helpers
 #'
-#' Functions to help users set up LLM dependencies for tinylens.
+#' Functions to help users set up LLM dependencies for tidylens.
 #'
 #' @name llm_setup
 #' @keywords internal
@@ -65,7 +65,7 @@ llm_check_ollama <- function(base_url = "http://localhost:11434", verbose = TRUE
 
 #' List available vision models from Ollama
 #'
-#' Lists vision-capable models that can be used with tinylens LLM functions.
+#' Lists vision-capable models that can be used with tidylens LLM functions.
 #'
 #' @param base_url Base URL for Ollama server. Default `"http://localhost:11434"`.
 #' @param only_installed If TRUE, only show installed models. Default FALSE.
@@ -163,7 +163,7 @@ llm_list_models <- function(base_url = "http://localhost:11434",
 
 #' Pull (download) a vision model from Ollama
 #'
-#' Downloads a vision-capable model for use with tinylens LLM functions.
+#' Downloads a vision-capable model for use with tidylens LLM functions.
 #'
 #' @param model Model name to download. Default `"qwen2.5vl:7b"`.
 #' @param base_url Base URL for Ollama server. Default `"http://localhost:11434"`.
@@ -225,7 +225,7 @@ llm_pull_model <- function(model = "qwen2.5vl:7b",
   invisible(FALSE)
 }
 
-#' Check LLM dependencies for tinylens
+#' Check LLM dependencies for tidylens
 #'
 #' Verifies all required packages and services for LLM functions.
 #'
@@ -336,7 +336,7 @@ llm_setup_instructions <- function(platform = "auto") {
                        "linux")
   }
 
-  cli::cli_h1("tinylens LLM Setup Instructions")
+  cli::cli_h1("tidylens LLM Setup Instructions")
 
   cli::cli_h2("Step 1: Install Required R Packages")
   cli::cli_code("install.packages(c('httr2', 'base64enc', 'jsonlite'))")
@@ -378,7 +378,7 @@ llm_setup_instructions <- function(platform = "auto") {
 
   cli::cli_h2("Step 4: Verify Setup")
   cli::cli_code('
-library(tinylens)
+library(tidylens)
 llm_check_ollama()       # Should show Ollama is running
 llm_list_models()        # List available models
   ')

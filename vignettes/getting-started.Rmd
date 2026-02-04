@@ -1,8 +1,8 @@
 ---
-title: "Getting Started with Tinylens"
+title: "Getting Started with Tidylens"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Getting Started with Tinylens}
+  %\VignetteIndexEntry{Getting Started with Tidylens}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -16,15 +16,15 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Tinylens: Image-First Analysis for Digital Humanities
+# Tidylens: Image-First Analysis for Digital Humanities
 
-Tinylens provides a **tidy, pipeable API** for analyzing visual content. It's designed for **film studies**, **digital humanities**, and anyone who wants to extract quantitative features from images.
+Tidylens provides a **tidy, pipeable API** for analyzing visual content. It's designed for **film studies**, **digital humanities**, and anyone who wants to extract quantitative features from images.
 
 ## Installation
 
 ```r
 # From GitHub
-devtools::install_github("yourusername/tinylens")
+devtools::install_github("yourusername/tidylens")
 ```
 
 **Optional dependencies** for enhanced features:
@@ -50,7 +50,7 @@ install.packages("torchvision")
 ## Load Images
 
 ```r
-library(tinylens)
+library(tidylens)
 
 # Load all images from a folder
 images <- load_images("path/to/images/")
@@ -60,7 +60,7 @@ images <- load_images(c("image1.jpg", "image2.png", "image3.jpg"))
 
 # See what we have
 images
-#> ── Tinylens Image Collection ─────────────────────
+#> ── Tidylens Image Collection ─────────────────────
 #> 50 images
 #> Formats: jpeg: 50
 #> Dimensions: 1280-1280 x 536-536
@@ -165,7 +165,7 @@ images <- detect_faces(images)   # face_count, face_areas, face_positions
 
 # Video Analysis
 
-Tinylens makes it easy to go from **video → frames → analysis**:
+Tidylens makes it easy to go from **video → frames → analysis**:
 
 ## Extract Frames
 
@@ -193,7 +193,7 @@ frames <- frames |>
 
 ## Shot Detection
 
-Tinylens automatically detects **shot boundaries** (scene cuts):
+Tidylens automatically detects **shot boundaries** (scene cuts):
 
 ```r
 shots <- video_extract_shots("movie.mp4", threshold = 0.4)
@@ -208,7 +208,7 @@ shots <- video_extract_shots("movie.mp4", threshold = 0.4)
 
 ### Shot Scale Classification
 
-Tinylens classifies each shot into **9 standard cinematography scales** based on [StudioBinder's industry guide](https://www.studiobinder.com/blog/ultimate-guide-to-camera-shots/):
+Tidylens classifies each shot into **9 standard cinematography scales** based on [StudioBinder's industry guide](https://www.studiobinder.com/blog/ultimate-guide-to-camera-shots/):
 
 | Scale | Abbreviation | What's in Frame | Subject Coverage |
 |-------|--------------|-----------------|------------------|
@@ -297,7 +297,7 @@ shots |>
 
 # Audio Analysis
 
-Tinylens can extract **audio features** aligned to your video frames or shots. This lets you analyze the **sound** alongside the **visuals**.
+Tidylens can extract **audio features** aligned to your video frames or shots. This lets you analyze the **sound** alongside the **visuals**.
 
 ## Setup
 
@@ -394,7 +394,7 @@ shots_with_audio |>
 
 # LLM Vision (Ollama)
 
-Tinylens integrates with **Ollama** for AI-powered image analysis:
+Tidylens integrates with **Ollama** for AI-powered image analysis:
 
 ## Setup
 
@@ -443,7 +443,7 @@ images <- llm_recognize(images)
 Here's a full analysis workflow:
 
 ```r
-library(tinylens)
+library(tidylens)
 library(dplyr)
 
 # 1. Extract frames from video

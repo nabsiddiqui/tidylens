@@ -163,7 +163,7 @@ load_images <- function(path,
 #' @family io
 #' @export
 print.tl_images <- function(x, ...) {
-  cli::cli_h1("Tinylens Image Collection")
+  cli::cli_h1("Tidylens Image Collection")
   cli::cli_text("{.val {nrow(x)}} images")
 
   # Show formats (nolint: used in cli_text below)

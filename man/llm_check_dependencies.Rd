@@ -2,7 +2,7 @@
 % Please edit documentation in R/llm_setup.R
 \name{llm_check_dependencies}
 \alias{llm_check_dependencies}
-\title{Check LLM dependencies for tinylens}
+\title{Check LLM dependencies for tidylens}
 \usage{
 llm_check_dependencies(provider = "all", verbose = TRUE)
 }

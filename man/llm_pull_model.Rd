@@ -15,7 +15,7 @@ llm_pull_model(model = "qwen2.5vl:7b", base_url = "http://localhost:11434")
 TRUE if successful, FALSE otherwise.
 }
 \description{
-Downloads a vision-capable model for use with tinylens LLM functions.
+Downloads a vision-capable model for use with tidylens LLM functions.
 }
 \details{
 \subsection{Model Size Guide}{\tabular{llll}{

@@ -1,4 +1,4 @@
-#' tinylens: Tidy Image Analysis for Digital Humanities
+#' tidylens: Tidy Image Analysis for Digital Humanities
 #'
 #' A tidy, pipeable toolkit for image-first analysis targeting digital 
 #' humanities and film studies. Provides functions for loading image collections,

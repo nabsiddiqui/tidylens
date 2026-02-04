@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="logo.png" alt="Tinylens Logo" width="350">
+  <img src="logo.png" alt="Tidylens Logo" width="350">
   <br>
   <em>Tidy image-first analysis for digital humanities and film studies</em>
 </p>
 
 <p align="center">
-<a href="https://github.com/nabsiddiqui/tinylens"><img src="https://img.shields.io/badge/R--CMD--check-passing-brightgreen" alt="R-CMD-check"></a>
+<a href="https://github.com/nabsiddiqui/tidylens"><img src="https://img.shields.io/badge/R--CMD--check-passing-brightgreen" alt="R-CMD-check"></a>
 <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 
@@ -14,7 +14,7 @@
 ## Installation
 
 ```r
-devtools::install_github("nabsiddiqui/tinylens")
+devtools::install_github("nabsiddiqui/tidylens")
 ```
 
 **Optional dependencies** for enhanced features:
@@ -30,7 +30,7 @@ install.packages(c("torch", "torchvision"))  # Neural embeddings
 ## Quick Start
 
 ```r
-library(tinylens)
+library(tidylens)
 
 # Load images from folder
 images <- load_images("path/to/images/")
@@ -40,7 +40,7 @@ images <- load_images(c("image1.jpg", "image2.png"))
 
 # Result: tl_images tibble with one row per image
 images
-#> ── Tinylens Image Collection ─────────────────────
+#> ── Tidylens Image Collection ─────────────────────
 #> 50 images
 #> Formats: jpeg: 50
 #> Dimensions: 1280-1280 x 536-536
@@ -119,7 +119,7 @@ shots <- video_extract_shots("movie.mp4", threshold = 0.4)
 
 ### Shot Scale Classification
 
-Tinylens classifies each shot into **9 standard cinematography scales**:
+Tidylens classifies each shot into **9 standard cinematography scales**:
 
 | Scale | Abbrev | What's in Frame |
 |-------|--------|-----------------|
@@ -209,7 +209,7 @@ images <- llm_recognize(images)   # Object recognition
 ## Complete Pipeline
 
 ```r
-library(tinylens)
+library(tidylens)
 library(dplyr)
 
 # 1. Extract and analyze frames
@@ -274,6 +274,6 @@ MIT © Nabeel Siddiqui
 ## Citation
 
 ```
-Siddiqui, N. (2026). tinylens: Tidy Image Analysis for Digital Humanities.
-R package. https://github.com/nabsiddiqui/tinylens
+Siddiqui, N. (2026). tidylens: Tidy Image Analysis for Digital Humanities.
+R package. https://github.com/nabsiddiqui/tidylens
 ```

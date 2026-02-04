@@ -15,7 +15,7 @@ llm_list_models(base_url = "http://localhost:11434", only_installed = FALSE)
 A tibble with model information, or NULL if Ollama is not running.
 }
 \description{
-Lists vision-capable models that can be used with tinylens LLM functions.
+Lists vision-capable models that can be used with tidylens LLM functions.
 }
 \details{
 \subsection{Recommended Vision Models}{\tabular{lll}{

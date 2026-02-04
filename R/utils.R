@@ -1,4 +1,4 @@
-#' Internal utility functions for tinylens
+#' Internal utility functions for tidylens
 #'
 #' @keywords internal
 #' @name utils

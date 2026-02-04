@@ -30,7 +30,7 @@ Uses face detection if available, otherwise estimates based on visual salience.
 \details{
 \subsection{Standard Film Shot Scales (9 types)}{
 
-Tinylens classifies shots into 9 cinematography-standard scale types based on
+Tidylens classifies shots into 9 cinematography-standard scale types based on
 the \href{https://www.studiobinder.com/blog/ultimate-guide-to-camera-shots/}{StudioBinder shot scale guide}:\tabular{lll}{
    Code \tab Name \tab What's in Frame \cr
    ECU \tab Extreme Close-Up \tab Eyes, mouth, or small detail fills frame \cr

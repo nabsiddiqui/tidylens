@@ -637,7 +637,7 @@ video_extract_shot_frames <- function(images, shots, position = "middle") {
 #'
 #' ## Standard Film Shot Scales (9 types)
 #'
-#' Tinylens classifies shots into 9 cinematography-standard scale types based on
+#' Tidylens classifies shots into 9 cinematography-standard scale types based on
 #' the [StudioBinder shot scale guide](https://www.studiobinder.com/blog/ultimate-guide-to-camera-shots/):
 #'
 #' | Code | Name | What's in Frame |

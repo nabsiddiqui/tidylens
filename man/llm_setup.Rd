@@ -4,6 +4,6 @@
 \alias{llm_setup}
 \title{LLM Setup Helpers}
 \description{
-Functions to help users set up LLM dependencies for tinylens.
+Functions to help users set up LLM dependencies for tidylens.
 }
 \keyword{internal}
