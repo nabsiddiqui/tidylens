@@ -1,0 +1,41 @@
+Package: tinylens
+Title: Tidy Image Analysis for Digital Humanities
+Version: 0.1.0
+Author: Nabeel Siddiqui [aut, cre]
+Maintainer: Nabeel Siddiqui <nabeel@example.com>
+Description: A tidy, pipeable toolkit for image-first analysis targeting digital 
+    humanities and film studies. Provides functions for loading image collections,
+    extracting color metrics, texture features, composition analysis, face/object
+    detection, and neural embeddings. All functions return tidy tibbles with one 
+    row per image and scalar feature columns for easy downstream analysis.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports:
+    magick,
+    tibble,
+    dplyr,
+    purrr,
+    cli,
+    fs,
+    tools,
+    stats,
+    utils,
+    rlang
+Suggests:
+    av,
+    tuneR,
+    torch,
+    torchvision,
+    httr2,
+    jsonlite,
+    base64enc,
+    image.libfacedetection,
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+URL: https://github.com/nabeelsiddiqui/tinylens
+BugReports: https://github.com/nabeelsiddiqui/tinylens/issues

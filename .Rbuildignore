@@ -1,0 +1,6 @@
+^doc$
+^Meta$
+^\.\.Rcheck$
+^\.github$
+^memory-bank$
+^joss-release-schedule\.md$
