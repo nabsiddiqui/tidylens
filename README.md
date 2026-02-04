@@ -119,7 +119,7 @@ shots <- video_extract_shots("movie.mp4", threshold = 0.4)
 
 ### Shot Scale Classification
 
-Tinylens classifies each shot into **9 standard cinematography scales** based on [StudioBinder's industry guide](https://www.studiobinder.com/blog/ultimate-guide-to-camera-shots/):
+Tinylens classifies each shot into **9 standard cinematography scales**:
 
 | Scale | Abbrev | What's in Frame |
 |-------|--------|-----------------|
@@ -264,14 +264,6 @@ write.csv(shots, "shot_data.csv")
 
 ### LLM Vision
 `llm_describe()`, `llm_classify()`, `llm_sentiment()`, `llm_recognize()`, `llm_check_ollama()`, `llm_list_models()`, `llm_pull_model()`, `llm_check_dependencies()`
-
----
-
-## References
-
-- **ASL**: Salt, B. (2009). *Film Style and Technology: History and Analysis*
-- **Colourfulness**: Hasler & Süsstrunk (2003). "Measuring Colorfulness in Natural Images"
-- **Shot Scales**: [StudioBinder Camera Shot Guide](https://www.studiobinder.com/blog/ultimate-guide-to-camera-shots/)
 
 ---
 
