@@ -3,4 +3,5 @@
 ^\.\.Rcheck$
 ^\.github$
 ^memory-bank$
+^docs$
 ^joss-release-schedule\.md$
