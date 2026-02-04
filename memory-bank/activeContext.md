@@ -1,112 +1,100 @@
-# Active Context: Tinylens
+# Active Context: Tidylens Development
 
-## Current Work Focus
+## Current State (Last Updated: Session 27)
 
-### Recently Completed (v1.14)
+### Package Status
+- **Name:** tidylens (renamed from tinylens)
+- **Version:** 0.1.0
+- **Repository:** https://github.com/nabsiddiqui/tidylens
+- **R CMD check:** PASS with 1 NOTE (suggested packages)
+- **Test Results:** 15 shots detected, 62 columns extracted from hero.mp4
 
-- **Package Validation**: Fixed R CMD check issues
-  - Fixed NAMESPACE imports (stats, utils, graphics)
-  - Fixed LICENSE format (DCF format)
-  - Fixed vignette structure (inst/doc)
-  - Updated .Rbuildignore
-  - **Result: 1 NOTE (acceptable)**
+### Recent Changes
+1. **Renamed package** from tinylens → tidylens (all files updated)
+2. **Consolidated folder structure** - single folder with:
+   - Package files at root (GitHub repo)
+   - memory-bank/ for dev notes and tests
+   - docs/ for internal documentation
+3. **README** - comprehensive documentation merged from vignette
+4. **GitHub** - live at nabsiddiqui/tidylens
 
-- **Core Functionality Verified**: Comprehensive test passed
-  - Video shot extraction: 15 shots detected
-  - Color extraction: 11 functions working
-  - Fluency/composition: 4 functions working
-  - Film metrics: ASL, rhythm, scale distribution
-  - **62 columns extracted per image**
-
-### Active Decisions
-
-1. **Directory Structure**: Clean separation:
-   - `docs/` = Reference documentation
-   - `vignettes/` = User tutorials
-   - `memory-bank/tests/` = Test scripts and data
-   - `logo.png` = Package branding at root
-
-2. **Package Status**: Ready for use
-   - R CMD check: 1 NOTE (optional deps not available)
-   - All core functions working
-
-## File Structure (v1.14)
-
+### Folder Structure
 ```
-tinylens/
-├── DESCRIPTION
-├── LICENSE
-├── NAMESPACE
-├── README.md
-├── logo.png
-├── .Rbuildignore
-├── .github/
-│   └── copilot-instructions.md
-├── docs/
+tidylens/
+├── .git/                 ← GitHub repository
+├── R/                    ← 11 source files
+├── man/                  ← Function documentation
+├── vignettes/            ← getting-started.Rmd
+├── docs/                 ← Internal docs
 │   ├── code-architecture.md
 │   ├── feature-glossary.md
 │   ├── naming-convention.md
 │   ├── output-reference.md
 │   └── publishing-guide.md
-├── inst/
-│   └── doc/                     # Vignette outputs
-├── memory-bank/
-│   ├── activeContext.md
-│   ├── productContext.md
-│   ├── progress.md
-│   ├── projectbrief.md
-│   ├── systemPatterns.md
-│   ├── techContext.md
-│   └── tests/
-│       ├── hero.mp4             # Test video
-│       ├── test_run.R           # Main test script
-│       └── outputs/             # CSV outputs
-├── R/
-│   ├── audio.R
-│   ├── color.R
-│   ├── detection.R
-│   ├── embeddings.R
-│   ├── film_metrics.R
-│   ├── fluency.R
-│   ├── llm.R
-│   ├── llm_setup.R
-│   ├── load_images.R
-│   ├── tinylens-package.R       # Package-level docs + imports
-│   ├── utils.R
-│   └── video.R
-└── vignettes/
-    └── getting-started.Rmd
+├── memory-bank/          ← This folder
+│   ├── tests/            ← Test scripts and outputs
+│   └── *.md              ← Context files
+├── DESCRIPTION
+├── NAMESPACE
+├── README.md
+├── logo.png
+└── LICENSE
 ```
 
-## Next Steps
+### What's Working
+- All 38+ functions operational
+- Shot detection with 9-scale classification
+- Color analysis (11 functions)
+- Composition metrics (4 functions)
+- Audio analysis per shot
+- LLM vision via Ollama (4 functions)
+- Tidy outputs (one row per image)
 
-1. **Testing**: Continue running test scripts to verify all functions
-2. **Documentation**: Update docs if needed
-3. **Publication**: Consider publishing to GitHub, CRAN, or journal
+### SoftwareX Submission
+- Target journal: SoftwareX (no 6-month history requirement)
+- Separate memory-bank created at: `/Dropbox/Spring 2026/Tidylens Software X Submission/`
+- Next step: Draft manuscript following SoftwareX guidelines
 
-## Important Patterns and Preferences
+---
 
-### Function Patterns
-- All extract_* functions: `function(tl_images, ...) -> tl_images with added columns`
-- All video_* functions that return images: Must return tl_images class
-- LLM functions: Default to qwen2.5vl, allow model override, use trimws() on output
-- All roxygen docs: Periods at end of @param, @return bullet items
+## Quick Reference
 
-### User Preferences
-- Prefers tidy data principles strictly enforced
-- Wants single-purpose functions over multi-purpose ones
-- Values ELI5 documentation style
-- Local-only processing (no cloud APIs)
-- Follows tidyverse style guide
+### Install from GitHub
+```r
+devtools::install_github("nabsiddiqui/tidylens")
+```
 
-## Learnings and Project Insights
+### Basic Usage
+```r
+library(tidylens)
 
-1. **magick array ordering**: `as.integer(image_data())` returns HxWxC, index as `data[,,1]` for R channel
+# Video analysis
+shots <- video_extract_shots("movie.mp4") |>
+  extract_audio_features("movie.mp4")
 
-2. **Progress bars**: Cannot use `cli_progress_update()` inside `purrr::map()` - must use for loops
+# Image analysis  
+images <- load_images("folder/") |>
+  extract_brightness() |>
+  extract_colourfulness()
+```
 
-3. **Shot scale systems**: Industry (StudioBinder) and academic (CFA/Salt) use different conventions - both are valid
+### Run Tests
+```r
+source("memory-bank/tests/run_full_test.R")
+```
 
-4. **ASL limitations**: ASL is affected by outliers; our asl_median addresses this
+---
 
-5. **R CMD check**: Use `_R_CHECK_FORCE_SUGGESTS_=false` to skip optional dependency checks
+## Session History
+
+| Session | Date | Actions |
+|---------|------|---------|
+| 1-14 | Earlier | Fixed R CMD check, cleanup, initial GitHub push |
+| 15-16 | Today | Merged vignette into README |
+| 17 | Today | Removed inst/doc, Related Projects |
+| 18 | Today | Removed References, created Bluesky post |
+| 19-20 | Today | Renamed tinylens → tidylens, pushed to new repo |
+| 21-23 | Today | Verified Ollama integration |
+| 24 | Today | Created SoftwareX submission folder |
+| 25-26 | Today | Consolidated folder structure |
+| 27 | Today | Updated memory bank |

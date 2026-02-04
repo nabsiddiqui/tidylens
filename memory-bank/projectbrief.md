@@ -1,59 +1,71 @@
-# Project Brief: Tinylens
+# Project Brief: Tidylens
 
-## Project Name
-**Tinylens** - An R Package for Image-First Analysis
+## What is Tidylens?
 
-## Core Purpose
-An R package targeting digital humanities and film studies researchers who need quantitative visual analysis tools. Provides a tidy, pipeable API for analyzing visual content without requiring Python dependencies.
+An R package for **image-first visual analysis** targeting digital humanities and film studies. Provides a tidy, pipeable API for extracting quantitative features from images and video.
 
-## Core Requirements
+## Core Value Proposition
 
-### Functional Requirements
-1. Load images from files/URLs into a tidy data structure (one row per image)
-2. Extract 70+ scalar features across color, texture, composition, and detection
-3. Process video files (frame extraction, shot detection, pacing analysis)
-4. Integrate with local LLMs (Ollama) for vision descriptions
-5. All functions return tibbles that chain with dplyr/tidyverse pipes
+1. **R-native:** No Python dependencies for core functionality
+2. **Tidy outputs:** All functions return tibbles with one row per image
+3. **Film-specific:** Metrics designed for humanities research questions
+4. **Local LLM:** Ollama integration for privacy-conscious research
 
-### Technical Requirements
-- **R-first**: No Python dependencies for core functionality
-- **Tidy outputs**: All functions return tibbles with one row per image
-- **Scalar columns**: Feature extraction produces scalar columns (not nested lists)
-- **Composability**: Small focused functions that chain with pipes
-- **Local-only LLM**: All LLM functions use Ollama (no cloud providers)
+## Feature Categories
 
-## Target Users
-- Digital humanities researchers
-- Film studies scholars
-- Media analysts
-- Anyone needing quantitative visual analysis in R
+### Video Processing
+- `video_get_info()` - Video metadata
+- `video_extract_frames()` - Extract at FPS
+- `video_sample_frames()` - Sample N frames
+- `video_extract_shots()` - Shot boundary detection
+- `video_extract_shot_frames()` - Representative frame per shot
 
-## Success Criteria
-1. ✅ 70 columns extracted from images
-2. ✅ All 38+ core functions tested and working
-3. ✅ Video processing pipeline complete
-4. ✅ Audio feature extraction (7 columns)
-5. ✅ Film classification (shot scale + camera angle)
-6. ✅ LLM integration with Ollama verified
-7. ✅ Tidy data principles enforced throughout
-8. ✅ Tidyverse style guide compliance
+### Color Analysis (11 functions)
+- Brightness, saturation, colourfulness
+- Mean/median/mode RGB
+- Dominant color (k-means)
+- Warmth/tint
+- Color moments, variance
+- Hue histogram
 
-## Project Scope
+### Composition (4 functions)
+- Fluency metrics (symmetry, balance)
+- Rule of thirds
+- Visual complexity
+- Center bias
 
-### In Scope
-- Image feature extraction (color, fluency, composition)
-- Video frame/shot extraction with timing
-- Audio feature extraction (RMS, ZCR, spectral analysis)
-- Per-image film metrics (shot scale, camera angle classification)
-- Local LLM vision integration (Ollama)
-- Documentation with ELI5 explanations
+### Film Metrics
+- Shot scale classification (9 StudioBinder types: ECU, CU, MCU, MS, CS, MFS, FS, WS, EWS)
+- ASL computed via dplyr summarise
 
-### Out of Scope
-- Cloud LLM providers (OpenAI, Google Vision, etc.)
-- Spatio-temporal slices (low priority)
-- Python interop
+### Detection
+- Face detection (requires image.libfacedetection)
+- Skin tone proportion
 
-## Key Constraints
-- Must work on macOS, Linux, Windows
-- Core functions should not require heavy dependencies (torch, av are optional)
-- All outputs must follow tidy data principles
+### Audio
+- Full features: RMS, peak, ZCR, silence ratio, freq energy, spectral centroid
+- Lightweight: RMS only
+
+### LLM Vision (Ollama)
+- `llm_describe()` - Natural language descriptions
+- `llm_classify()` - Category classification
+- `llm_sentiment()` - Mood/valence/intensity
+- `llm_recognize()` - Object detection
+
+## Target Audience
+
+1. Film scholars analyzing editing patterns, color palettes
+2. Digital humanities researchers with visual archives
+3. Cultural analytics practitioners
+4. R users preferring tidyverse workflows
+
+## Repository
+
+- **GitHub:** https://github.com/nabsiddiqui/tidylens
+- **License:** MIT
+- **Author:** Nabeel Siddiqui
+
+## Publication Plan
+
+- **Target:** SoftwareX (no 6-month public history requirement)
+- **Submission folder:** `/Dropbox/Spring 2026/Tidylens Software X Submission/`
