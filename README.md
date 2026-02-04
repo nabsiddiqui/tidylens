@@ -267,14 +267,6 @@ write.csv(shots, "shot_data.csv")
 
 ---
 
-## Related Projects
-
-- [Cinemetrics](http://www.cinemetrics.lv/) - Film shot length database
-- [FilmColors](https://filmcolors.org/) - Historical film color analysis
-- [VIAN](https://www.vian.app/) - Video annotation for film analysis
-
----
-
 ## References
 
 - **ASL**: Salt, B. (2009). *Film Style and Technology: History and Analysis*
