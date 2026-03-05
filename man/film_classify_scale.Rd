@@ -20,11 +20,11 @@ or 224 (CNN).}
 \value{
 The input tibble with added columns:
 \itemize{
-\item \code{shot_scale}: Shot scale code (e.g. ECU, CU, MCU, MS, MLS, LS, ELS).
-\item \code{shot_scale_name}: Full name of shot scale.
-\item \code{shot_scale_group}: Broad grouping: Close, Medium, or Long.
-\item \code{subject_coverage}: CNN confidence for the predicted class (CNN method)
-or composite closeness score 0-1 (heuristic method).
+\item \code{shot_scale}: Broad shot scale group: Close, Medium, or Long.
+\item \code{shot_scale_detail}: Fine-grained code (e.g. ECU, CU, MCU, MS, MLS,
+LS, ELS for CNN; or CS, MFS, FS, WS, EWS for heuristic).
+\item \code{shot_scale_confidence}: CNN confidence for the predicted class
+(CNN method) or composite closeness score 0-1 (heuristic method).
 }
 }
 \description{
@@ -37,21 +37,17 @@ a lightweight multi-feature heuristic is used as a fallback.
 \details{
 \subsection{Shot Scale Categories}{
 
-The CNN method classifies into 7 standard CineScale categories:\tabular{lll}{
-   Code \tab Name \tab What's in Frame \cr
-   ECU \tab Extreme Close-Up \tab Eyes, mouth, or small detail fills frame \cr
-   CU \tab Close-Up \tab Face fills the frame \cr
-   MCU \tab Medium Close-Up \tab Head and shoulders (chest up) \cr
-   MS \tab Medium Shot \tab Waist up \cr
-   MLS \tab Medium Long Shot \tab Knees up \cr
-   LS \tab Long Shot \tab Full body with surrounding environment \cr
-   ELS \tab Extreme Long Shot \tab Small figure in vast landscape \cr
+The classifier assigns one of three broad shot scale categories:\tabular{ll}{
+   Group \tab What's in Frame \cr
+   Close \tab Face or detail fills the frame (ECU, CU, MCU) \cr
+   Medium \tab Waist to knees (MS, MLS) \cr
+   Long \tab Full body or landscape (LS, ELS) \cr
 }
 
 
-The heuristic fallback uses the same scale plus CS (Cowboy Shot), MFS
-(Medium Full Shot), FS (Full Shot), WS (Wide Shot), and EWS (Extreme
-Wide Shot) from the StudioBinder system.
+The CNN method predicts seven fine-grained CineScale categories (ECU, CU,
+MCU, MS, MLS, LS, ELS) and maps them to these three groups. The heuristic
+fallback computes a composite score and maps to the same three groups.
 }
 }
 \references{

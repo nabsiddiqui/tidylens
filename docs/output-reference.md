@@ -83,27 +83,21 @@ Columns added by `film_classify_scale()` or `video_extract_shots()`:
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `shot_scale` | character | Shot scale code (see table below) |
-| `shot_scale_name` | character | Full name of shot scale |
-| `subject_coverage` | numeric | Fraction of frame covered by subject (0-1) |
+| `shot_scale` | character | Broad group: Close, Medium, or Long |
+| `shot_scale_detail` | character | Fine-grained code (e.g. ECU, CU, MCU, MS, MLS, LS, ELS) |
+| `shot_scale_confidence` | numeric | CNN confidence or heuristic closeness score (0-1) |
 
-### Shot Scale Types (StudioBinder Standard - 9 scales)
+### Shot Scale Groups
 
-Based on [StudioBinder's Ultimate Guide to Camera Shots](https://www.studiobinder.com/blog/ultimate-guide-to-camera-shots/).
+The CNN method classifies into 7 CineScale categories and maps them to 3 broad groups:
 
-| Code | Name | What's in Frame | Coverage |
-|------|------|-----------------|----------|
-| **ECU** | Extreme Close-Up | Eyes, mouth, or small detail fills frame | >55% |
-| **CU** | Close-Up | Face fills the frame | 40-55% |
-| **MCU** | Medium Close-Up | Head and shoulders (chest up) | 30-40% |
-| **MS** | Medium Shot | Waist up | 22-30% |
-| **CS** | Cowboy Shot | Mid-thigh up (named for Western holster framing) | 15-22% |
-| **MFS** | Medium Full Shot | Knees up (also called Medium Wide Shot) | 10-15% |
-| **FS** | Full Shot | Full body, head to toe with minimal space | 5-10% |
-| **WS** | Wide Shot | Full body with surrounding environment | 2-5% |
-| **EWS** | Extreme Wide Shot | Small figure in vast landscape | <2% |
+| Group | CineScale Codes | What's in Frame |
+|-------|----------------|-----------------|
+| **Close** | ECU, CU, MCU | Face or detail fills the frame |
+| **Medium** | MS, MLS | Waist to knees |
+| **Long** | LS, ELS | Full body or landscape |
 
-*Note: "Establishing Shot" is a narrative type (first shot of a scene showing location) rather than a coverage-based classification, so it's not included in automated detection.*
+The heuristic fallback uses coverage-based codes (CS, MFS, FS, WS, EWS) mapped to the same three groups.
 
 ---
 

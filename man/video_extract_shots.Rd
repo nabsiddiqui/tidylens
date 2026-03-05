@@ -37,8 +37,10 @@ A tibble with one row per shot containing:
 \item \code{start_frame}: Frame index of start.
 \item \code{end_frame}: Frame index of end.
 \item \code{n_frames}: Number of frames in shot.
-\item \code{shot_scale}: Shot scale (if include_style = TRUE).
-\item \code{shot_scale_name}: Full shot scale name.
+\item \code{shot_scale}: Broad shot scale group: Close, Medium, or Long
+(if include_style = TRUE).
+\item \code{shot_scale_detail}: Fine-grained shot scale code.
+\item \code{shot_scale_confidence}: CNN confidence or heuristic closeness score.
 \item \code{frame_path}: Path to representative frame image.
 }
 }
