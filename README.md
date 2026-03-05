@@ -119,19 +119,26 @@ shots <- video_extract_shots("movie.mp4", threshold = 0.4)
 
 ### Shot Scale Classification
 
-Tidylens classifies each shot into **9 standard cinematography scales**:
+Tidylens classifies each shot into **7 cinematography scales** using a ResNet-18 CNN that runs entirely on CPU (no GPU required). Validated against the [CineScale dataset](https://doi.org/10.1016/j.dib.2021.106934): **85% 3-class accuracy, 75% 7-class accuracy**.
 
-| Scale | Abbrev | What's in Frame |
-|-------|--------|-----------------|
-| Extreme Close-Up | ECU | Eyes, mouth, or detail |
-| Close-Up | CU | Face fills frame |
-| Medium Close-Up | MCU | Head and shoulders |
-| Medium Shot | MS | Waist up |
-| Cowboy Shot | CS | Mid-thigh up |
-| Medium Full Shot | MFS | Knees up |
-| Full Shot | FS | Full body |
-| Wide Shot | WS | Full body + environment |
-| Extreme Wide Shot | EWS | Small figure in landscape |
+| Scale | Abbrev | Group | What's in Frame |
+|-------|--------|-------|-----------------|
+| Extreme Close-Up | ECU | Close | Eyes, mouth, or detail |
+| Close-Up | CU | Close | Face fills frame |
+| Medium Close-Up | MCU | Medium | Head and shoulders |
+| Medium Shot | MS | Medium | Waist up |
+| Medium Long Shot | MLS | Long | Knees up |
+| Long Shot | LS | Long | Full body |
+| Extreme Long Shot | ELS | Long | Small figure in landscape |
+
+```r
+# CNN method (default when torch installed) — 85% 3-class accuracy
+shots <- video_extract_shots("movie.mp4")
+# Returns: shot_scale (7-class), shot_scale_group (Close/Medium/Long)
+
+# Works without torch too (heuristic fallback)
+shots <- video_extract_shots("movie.mp4")  # auto-detects available method
+```
 
 ---
 
