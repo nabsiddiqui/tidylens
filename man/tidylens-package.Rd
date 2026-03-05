@@ -14,8 +14,8 @@ and neural embeddings.
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/nabeelsiddiqui/tidylens}
-  \item Report bugs at \url{https://github.com/nabeelsiddiqui/tidylens/issues}
+  \item \url{https://github.com/nabsiddiqui/tidylens}
+  \item Report bugs at \url{https://github.com/nabsiddiqui/tidylens/issues}
 }
 
 }

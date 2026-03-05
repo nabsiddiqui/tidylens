@@ -9,50 +9,55 @@ film_classify_scale(tl_images, method = "auto", downsample = 400)
 \arguments{
 \item{tl_images}{A tl_images tibble.}
 
-\item{method}{Detection method: \code{"face"} (requires image.libfacedetection),
-\code{"salience"} (uses gradient-based salience), or \code{"auto"} (tries face,
-falls back to salience). Default \code{"auto"}.}
+\item{method}{Detection method: \code{"cnn"} (ResNet-18, requires torch +
+torchvision), \code{"multi_feature"} (lightweight heuristic), \code{"salience"}
+(alias for multi_feature), or \code{"auto"} (CNN if torch available, else
+multi_feature). Default \code{"auto"}.}
 
-\item{downsample}{Maximum side length for analysis. Default 400.}
+\item{downsample}{Maximum side length for analysis. Default 400 (heuristic)
+or 224 (CNN).}
 }
 \value{
 The input tibble with added columns:
 \itemize{
-\item \code{shot_scale}: Shot scale code (ECU, CU, MCU, MS, CS, MFS, FS, WS, EWS).
+\item \code{shot_scale}: Shot scale code (e.g. ECU, CU, MCU, MS, MLS, LS, ELS).
 \item \code{shot_scale_name}: Full name of shot scale.
-\item \code{subject_coverage}: Estimated fraction of frame covered by subject (0-1).
+\item \code{shot_scale_group}: Broad grouping: Close, Medium, or Long.
+\item \code{subject_coverage}: CNN confidence for the predicted class (CNN method)
+or composite closeness score 0-1 (heuristic method).
 }
 }
 \description{
-Classify shots based on detected face/subject size relative to frame.
-Uses face detection if available, otherwise estimates based on visual salience.
+Classify shots based on visual features to determine the cinematographic
+shot scale. When the \code{torch} and \code{torchvision} packages are available, a
+pre-trained ResNet-18 feature extractor with a linear classifier is used
+(trained on the CineScale dataset; ~85\\% 3-class accuracy on CPU). Otherwise
+a lightweight multi-feature heuristic is used as a fallback.
 }
 \details{
-\subsection{Standard Film Shot Scales (9 types)}{
+\subsection{Shot Scale Categories}{
 
-Tidylens classifies shots into 9 cinematography-standard scale types based on
-the \href{https://www.studiobinder.com/blog/ultimate-guide-to-camera-shots/}{StudioBinder shot scale guide}:\tabular{lll}{
+The CNN method classifies into 7 standard CineScale categories:\tabular{lll}{
    Code \tab Name \tab What's in Frame \cr
    ECU \tab Extreme Close-Up \tab Eyes, mouth, or small detail fills frame \cr
    CU \tab Close-Up \tab Face fills the frame \cr
    MCU \tab Medium Close-Up \tab Head and shoulders (chest up) \cr
    MS \tab Medium Shot \tab Waist up \cr
-   CS \tab Cowboy Shot \tab Mid-thigh up (named for Western holster framing) \cr
-   MFS \tab Medium Full Shot \tab Knees up (also called Medium Wide Shot) \cr
-   FS \tab Full Shot \tab Full body, head to toe with minimal space \cr
-   WS \tab Wide Shot \tab Full body with surrounding environment \cr
-   EWS \tab Extreme Wide Shot \tab Small figure in vast landscape \cr
+   MLS \tab Medium Long Shot \tab Knees up \cr
+   LS \tab Long Shot \tab Full body with surrounding environment \cr
+   ELS \tab Extreme Long Shot \tab Small figure in vast landscape \cr
 }
 
 
-\strong{Note:} Academic film studies (e.g., Redfern's \emph{Computational Film Analysis
-with R}) uses a 7-category system: BCU, CU, MCU, MS, MLS, LS, VLS. The
-mapping is approximately: ECU≈BCU, MFS≈MLS, WS≈LS, EWS≈VLS.
+The heuristic fallback uses the same scale plus CS (Cowboy Shot), MFS
+(Medium Full Shot), FS (Full Shot), WS (Wide Shot), and EWS (Extreme
+Wide Shot) from the StudioBinder system.
 }
 }
 \references{
-Redfern, N. (2023). \emph{Computational Film Analysis with R}.
-\url{https://cfa-with-r.netlify.app/}
+Savardi, M., Kovacs, A.B., Signoroni, A., & Benini, S. (2021). CineScale:
+A dataset of cinematic shot scale in movies. \emph{Data in Brief}, 36, 107002.
+\doi{10.1016/j.dib.2021.107002}
 }
 \seealso{
 Other film_metrics: 

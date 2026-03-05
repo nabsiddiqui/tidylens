@@ -1,2 +1,6 @@
 /doc/
 /Meta/
+tidylens.Rcheck/
+tidylens_*.tar.gz
+.Rhistory
+.RData

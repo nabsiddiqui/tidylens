@@ -563,9 +563,10 @@ video_extract_shots <- function(video_path,
 
   # Classify shot styles if requested
   if (include_style) {
-    shot_frames <- film_classify_scale(shot_frames, method = "salience", downsample = 300)
+    shot_frames <- film_classify_scale(shot_frames, method = "auto")
     shots$shot_scale <- shot_frames$shot_scale
     shots$shot_scale_name <- shot_frames$shot_scale_name
+    shots$shot_scale_group <- shot_frames$shot_scale_group
     shots$subject_coverage <- shot_frames$subject_coverage
   }
   
@@ -632,13 +633,15 @@ video_extract_shot_frames <- function(images, shots, position = "middle") {
 
 #' Classify shot style/scale
 #'
-#' Classify shots based on detected face/subject size relative to frame.
-#' Uses face detection if available, otherwise estimates based on visual salience.
+#' Classify shots based on visual features to determine the cinematographic
+#' shot scale. When the `torch` and `torchvision` packages are available, a
+#' pre-trained ResNet-18 feature extractor with a linear classifier is used
+#' (trained on the CineScale dataset; ~85\% 3-class accuracy on CPU). Otherwise
+#' a lightweight multi-feature heuristic is used as a fallback.
 #'
-#' ## Standard Film Shot Scales (9 types)
+#' ## Shot Scale Categories
 #'
-#' Tidylens classifies shots into 9 cinematography-standard scale types based on
-#' the [StudioBinder shot scale guide](https://www.studiobinder.com/blog/ultimate-guide-to-camera-shots/):
+#' The CNN method classifies into 7 standard CineScale categories:
 #'
 #' | Code | Name | What's in Frame |
 #' |------|------|-----------------|
@@ -646,184 +649,253 @@ video_extract_shot_frames <- function(images, shots, position = "middle") {
 #' | CU | Close-Up | Face fills the frame |
 #' | MCU | Medium Close-Up | Head and shoulders (chest up) |
 #' | MS | Medium Shot | Waist up |
-#' | CS | Cowboy Shot | Mid-thigh up (named for Western holster framing) |
-#' | MFS | Medium Full Shot | Knees up (also called Medium Wide Shot) |
-#' | FS | Full Shot | Full body, head to toe with minimal space |
-#' | WS | Wide Shot | Full body with surrounding environment |
-#' | EWS | Extreme Wide Shot | Small figure in vast landscape |
+#' | MLS | Medium Long Shot | Knees up |
+#' | LS | Long Shot | Full body with surrounding environment |
+#' | ELS | Extreme Long Shot | Small figure in vast landscape |
 #'
-#' **Note:** Academic film studies (e.g., Redfern's *Computational Film Analysis
-#' with R*) uses a 7-category system: BCU, CU, MCU, MS, MLS, LS, VLS. The
-#' mapping is approximately: ECU≈BCU, MFS≈MLS, WS≈LS, EWS≈VLS.
+#' The heuristic fallback uses the same scale plus CS (Cowboy Shot), MFS
+#' (Medium Full Shot), FS (Full Shot), WS (Wide Shot), and EWS (Extreme
+#' Wide Shot) from the StudioBinder system.
 #'
 #' @param tl_images A tl_images tibble.
-#' @param method Detection method: `"face"` (requires image.libfacedetection),
-#'   `"salience"` (uses gradient-based salience), or `"auto"` (tries face,
-#'   falls back to salience). Default `"auto"`.
-#' @param downsample Maximum side length for analysis. Default 400.
+#' @param method Detection method: `"cnn"` (ResNet-18, requires torch +
+#'   torchvision), `"multi_feature"` (lightweight heuristic), `"salience"`
+#'   (alias for multi_feature), or `"auto"` (CNN if torch available, else
+#'   multi_feature). Default `"auto"`.
+#' @param downsample Maximum side length for analysis. Default 400 (heuristic)
+#'   or 224 (CNN).
 #'
 #' @return The input tibble with added columns:
-#'   - `shot_scale`: Shot scale code (ECU, CU, MCU, MS, CS, MFS, FS, WS, EWS).
+#'   - `shot_scale`: Shot scale code (e.g. ECU, CU, MCU, MS, MLS, LS, ELS).
 #'
 #'   - `shot_scale_name`: Full name of shot scale.
 #'
-#'   - `subject_coverage`: Estimated fraction of frame covered by subject (0-1).
+#'   - `shot_scale_group`: Broad grouping: Close, Medium, or Long.
+#'
+#'   - `subject_coverage`: CNN confidence for the predicted class (CNN method)
+#'     or composite closeness score 0-1 (heuristic method).
 #'
 #' @references
-#' Redfern, N. (2023). *Computational Film Analysis with R*.
-#' <https://cfa-with-r.netlify.app/>
+#' Savardi, M., Kovacs, A.B., Signoroni, A., & Benini, S. (2021). CineScale:
+#' A dataset of cinematic shot scale in movies. *Data in Brief*, 36, 107002.
+#' \doi{10.1016/j.dib.2021.107002}
 #'
 #' @family film_metrics
 #' @export
 film_classify_scale <- function(tl_images, method = "auto", downsample = 400) {
   validate_tl_images(tl_images)
 
-  # Check face detection availability
-  has_face_detection <- requireNamespace("image.libfacedetection", quietly = TRUE)
+  has_torch <- requireNamespace("torch", quietly = TRUE) &&
+               requireNamespace("torchvision", quietly = TRUE)
 
   use_method <- method
-  if (method == "auto") {
-    use_method <- if (has_face_detection) "face" else "salience"
+  if (use_method == "auto") {
+    use_method <- if (has_torch) "cnn" else "multi_feature"
+  }
+  if (use_method == "salience") use_method <- "multi_feature"
+
+  if (use_method == "cnn" && !has_torch) {
+    cli::cli_warn(
+      c("torch/torchvision not available, falling back to heuristic method.",
+        "i" = "Install with: install.packages(c('torch', 'torchvision'))")
+    )
+    use_method <- "multi_feature"
   }
 
-  if (use_method == "face" && !has_face_detection) {
-    cli::cli_warn("Face detection not available, falling back to salience method.")
-    use_method <- "salience"
+  if (use_method == "cnn") {
+    return(.classify_scale_cnn(tl_images))
   }
 
-  # Shot scale classification based on subject coverage
-  # Using StudioBinder's 9 standard cinematography shot sizes
-  #
-  # Coverage ranges are based on typical framing:
-  # - ECU (Extreme Close-Up): Part of face/detail fills frame
-  # - CU (Close-Up): Face fills the frame
-  # - MCU (Medium Close-Up): Head and shoulders, chest up
-  # - MS (Medium Shot): Waist up
-  # - CS (Cowboy Shot): Mid-thigh up (named for Western holster framing)
-  # - MFS (Medium Full Shot): Knees up (also called Medium Wide Shot)
+  # --- Heuristic fallback ---
+  .classify_scale_heuristic(tl_images, downsample = downsample)
+}
 
-  # - FS (Full Shot): Full body, head to toe with minimal space
-  # - WS (Wide Shot): Full body with surrounding environment
-  # - EWS (Extreme Wide Shot): Small figure in vast landscape
-  classify_scale <- function(coverage) {
-    if (is.na(coverage)) {
-      return(list(scale = NA_character_, name = NA_character_))
-    }
+# ---- CNN-based classification (ResNet-18 + linear classifier) ----
 
-    if (coverage > 0.55) {
-      list(scale = "ECU", name = "Extreme Close-Up")
-    } else if (coverage > 0.40) {
-      list(scale = "CU", name = "Close-Up")
-    } else if (coverage > 0.30) {
-      list(scale = "MCU", name = "Medium Close-Up")
-    } else if (coverage > 0.22) {
-      list(scale = "MS", name = "Medium Shot")
-    } else if (coverage > 0.15) {
-      list(scale = "CS", name = "Cowboy Shot")
-    } else if (coverage > 0.10) {
-      list(scale = "MFS", name = "Medium Full Shot")
-    } else if (coverage > 0.05) {
-      list(scale = "FS", name = "Full Shot")
-    } else if (coverage > 0.02) {
-      list(scale = "WS", name = "Wide Shot")
-    } else {
-      list(scale = "EWS", name = "Extreme Wide Shot")
-    }
+.classify_scale_cnn <- function(tl_images) {
+  weights_path <- system.file("models", "shot_scale_weights.rds",
+                              package = "tidylens")
+  if (!nzchar(weights_path)) {
+    cli::cli_abort("Shot scale model weights not found in package installation.")
+  }
+  wt <- readRDS(weights_path)
+
+  model <- torchvision::model_resnet18(pretrained = TRUE)
+  model$eval()
+  feature_extractor <- torch::nn_sequential(
+    model$conv1, model$bn1, model$relu, model$maxpool,
+    model$layer1, model$layer2, model$layer3, model$layer4,
+    model$avgpool
+  )
+  feature_extractor$eval()
+
+  W <- torch::torch_tensor(wt$W)
+  b <- torch::torch_tensor(wt$b)
+  classes <- wt$classes
+  im_mean <- wt$imagenet_mean
+  im_sd <- wt$imagenet_sd
+  input_size <- wt$input_size
+
+  class3_map <- wt$class3_map
+  scale_names <- c(
+    ECU = "Extreme Close-Up", CU = "Close-Up", MCU = "Medium Close-Up",
+    MS = "Medium Shot", MLS = "Medium Long Shot",
+    LS = "Long Shot", ELS = "Extreme Long Shot"
+  )
+
+  results <- map_images(tl_images, function(img) {
+    tryCatch({
+      resized <- magick::image_resize(img,
+        paste0(input_size, "x", input_size, "!"))
+      arr <- as.integer(magick::image_data(resized))
+      tensor <- torch::torch_zeros(1, 3, input_size, input_size)
+      for (ch in 1:3) {
+        channel <- t(arr[,,ch]) / 255.0
+        tensor[1, ch, , ] <- (torch::torch_tensor(channel) - im_mean[ch]) / im_sd[ch]
+      }
+      torch::with_no_grad({
+        feats <- feature_extractor(tensor)$view(c(1, -1))
+        logits <- torch::torch_mm(feats, torch::torch_t(W)) +
+                  b$unsqueeze(1)
+        probs <- torch::nnf_softmax(logits, dim = 2)
+        pred_idx <- as.integer(logits$argmax(dim = 2))
+        confidence <- as.numeric(probs[1, pred_idx])
+      })
+      label <- classes[pred_idx]
+      list(
+        shot_scale = label,
+        shot_scale_name = unname(scale_names[label]),
+        shot_scale_group = unname(class3_map[label]),
+        subject_coverage = confidence
+      )
+    }, error = function(e) {
+      list(shot_scale = NA_character_, shot_scale_name = NA_character_,
+           shot_scale_group = NA_character_, subject_coverage = NA_real_)
+    })
+  }, msg = "Classifying shot scales (CNN)")
+
+  tl_images$shot_scale <- purrr::map_chr(results,
+    ~ .x$shot_scale %||% NA_character_)
+  tl_images$shot_scale_name <- purrr::map_chr(results,
+    ~ .x$shot_scale_name %||% NA_character_)
+  tl_images$shot_scale_group <- purrr::map_chr(results,
+    ~ .x$shot_scale_group %||% NA_character_)
+  tl_images$subject_coverage <- purrr::map_dbl(results,
+    ~ .x$subject_coverage %||% NA_real_)
+  tl_images
+}
+
+# ---- Heuristic fallback ----
+
+.classify_scale_heuristic <- function(tl_images, downsample = 400) {
+  has_face_detection <- requireNamespace("image.libfacedetection", quietly = TRUE)
+
+  classify_score <- function(score) {
+    if (is.na(score)) return(list(scale = NA_character_, name = NA_character_, group = NA_character_))
+    if      (score > 0.78) list(scale = "ECU", name = "Extreme Close-Up",   group = "Close")
+    else if (score > 0.65) list(scale = "CU",  name = "Close-Up",           group = "Close")
+    else if (score > 0.52) list(scale = "MCU", name = "Medium Close-Up",    group = "Close")
+    else if (score > 0.40) list(scale = "MS",  name = "Medium Shot",        group = "Medium")
+    else if (score > 0.30) list(scale = "CS",  name = "Cowboy Shot",        group = "Medium")
+    else if (score > 0.22) list(scale = "MFS", name = "Medium Full Shot",   group = "Medium")
+    else if (score > 0.14) list(scale = "FS",  name = "Full Shot",          group = "Long")
+    else if (score > 0.07) list(scale = "WS",  name = "Wide Shot",          group = "Long")
+    else                   list(scale = "EWS", name = "Extreme Wide Shot",  group = "Long")
   }
 
   results <- map_images(tl_images, function(img) {
     info <- magick::image_info(img)
-    frame_area <- info$width * info$height
+    w <- info$width; h <- info$height; frame_area <- w * h
 
-    if (use_method == "face") {
-      # Use face detection
-      gray <- magick::image_convert(img, colorspace = "gray")
-      data <- as.integer(magick::image_data(gray))
-
-      if (length(dim(data)) == 3) {
-        mat <- data[, , 1]
-      } else {
-        mat <- data
-      }
-
+    face_coverage <- NA_real_
+    if (has_face_detection) {
       tryCatch({
-        faces <- image.libfacedetection::image_detect_faces(mat)
-
-        if (nrow(faces) > 0) {
-          # Use largest face
-          face_areas <- faces$width * faces$height
-          max_face_idx <- which.max(face_areas)
-          face_area <- face_areas[max_face_idx]
-
-          # Estimate full subject from face (face is roughly 10-15% of full body)
-          # For close-ups, face is more of the visible area
-          subject_coverage <- face_area / frame_area
-
-          # Adjust: larger face coverage means tighter shot
-          # Face filling 20% of frame = roughly MCU
-          classification <- classify_scale(subject_coverage * 3)  # Scale up face to estimate visible subject
-          
-          return(list(
-            shot_scale = classification$scale,
-            shot_scale_name = classification$name,
-            subject_coverage = subject_coverage
-          ))
-        }
+        gray_img <- magick::image_convert(img, colorspace = "gray")
+        gray_data <- as.integer(magick::image_data(gray_img))
+        gray_mat <- if (length(dim(gray_data)) == 3) gray_data[,,1] else gray_data
+        faces <- image.libfacedetection::image_detect_faces(gray_mat)
+        if (nrow(faces) > 0) face_coverage <- max(faces$width * faces$height) / frame_area
       }, error = function(e) NULL)
     }
-    
-    # Salience-based method (fallback or primary)
-    gray <- magick::image_convert(img, colorspace = "gray")
-    data <- as.integer(magick::image_data(gray))
-    
-    if (length(dim(data)) == 3) {
-      mat <- data[, , 1] / 255.0
+
+    gray_img <- magick::image_convert(img, colorspace = "gray")
+    gray_data <- as.integer(magick::image_data(gray_img))
+    mat <- if (length(dim(gray_data)) == 3) gray_data[,,1] / 255.0 else gray_data / 255.0
+    nr <- nrow(mat); nc <- ncol(mat)
+    if (nr < 10 || nc < 10) {
+      return(list(shot_scale = NA_character_, shot_scale_name = NA_character_,
+                  shot_scale_group = NA_character_, subject_coverage = NA_real_))
+    }
+
+    lap <- mat[2:(nr-1), 2:(nc-1)] * (-4) +
+           mat[1:(nr-2), 2:(nc-1)] + mat[3:nr, 2:(nc-1)] +
+           mat[2:(nr-1), 1:(nc-2)] + mat[2:(nr-1), 3:nc]
+    lap_var <- stats::var(as.vector(lap))
+
+    gx <- abs(mat[, -1, drop = FALSE] - mat[, -nc, drop = FALSE])
+    gy <- abs(mat[-1, , drop = FALSE] - mat[-nr, , drop = FALSE])
+    min_r <- min(nrow(gx), nrow(gy)); min_c <- min(ncol(gx), ncol(gy))
+    edge_mag <- gx[seq_len(min_r), seq_len(min_c)] + gy[seq_len(min_r), seq_len(min_c)]
+    cr1 <- max(1L, round(min_r * 0.25)); cr2 <- min(min_r, round(min_r * 0.75))
+    cc1 <- max(1L, round(min_c * 0.25)); cc2 <- min(min_c, round(min_c * 0.75))
+    center_energy <- mean(edge_mag[cr1:cr2, cc1:cc2])
+    n_periph <- length(edge_mag) - length(edge_mag[cr1:cr2, cc1:cc2])
+    periph_energy <- if (n_periph > 0) (sum(edge_mag) - sum(edge_mag[cr1:cr2, cc1:cc2])) / n_periph else center_energy
+    center_ratio <- if (periph_energy > 1e-8) center_energy / periph_energy else 1.0
+
+    block_size <- max(4L, min(nr, nc) %/% 8L)
+    n_br <- nr %/% block_size; n_bc <- nc %/% block_size
+    if (n_br > 0 && n_bc > 0) {
+      block_vars <- numeric(n_br * n_bc); k <- 1L
+      for (bi in seq_len(n_br)) for (bj in seq_len(n_bc)) {
+        ri <- ((bi-1L)*block_size+1L):(bi*block_size)
+        ci <- ((bj-1L)*block_size+1L):(bj*block_size)
+        block_vars[k] <- stats::var(as.vector(mat[ri, ci])); k <- k + 1L
+      }
+      spatial_detail <- mean(block_vars, na.rm = TRUE)
+      bv_mean <- mean(block_vars, na.rm = TRUE)
+      spatial_cv <- if (bv_mean > 1e-8) stats::sd(block_vars, na.rm = TRUE) / bv_mean else 1.0
+    } else { spatial_detail <- stats::var(as.vector(mat)); spatial_cv <- 1.0 }
+
+    edge_threshold_val <- mean(edge_mag) + stats::sd(edge_mag)
+    edge_density <- sum(edge_mag > edge_threshold_val) / length(edge_mag)
+
+    rgb_data <- as.integer(magick::image_data(img))
+    r_vals <- as.vector(rgb_data[,,1]) / 255.0
+    g_vals <- as.vector(rgb_data[,,2]) / 255.0
+    b_vals <- as.vector(rgb_data[,,3]) / 255.0
+    r_hist <- tabulate(as.integer(r_vals * 15) + 1L, nbins = 16L)
+    g_hist <- tabulate(as.integer(g_vals * 15) + 1L, nbins = 16L)
+    b_hist <- tabulate(as.integer(b_vals * 15) + 1L, nbins = 16L)
+    combined <- c(r_hist, g_hist, b_hist)
+    p <- combined / sum(combined); p <- p[p > 0]
+    color_entropy <- -sum(p * log2(p))
+
+    f_lap        <- min(1, lap_var / 0.005)
+    f_center     <- min(1, max(0, (center_ratio - 0.7) / 1.0))
+    f_detail     <- min(1, spatial_detail / 0.008)
+    f_uniformity <- max(0, 1 - min(1, spatial_cv / 2.0))
+    f_edge       <- min(1, edge_density / 0.20)
+    f_color_close <- max(0, 1 - min(1, max(0, color_entropy - 2.5) / 3.0))
+
+    if (!is.na(face_coverage) && face_coverage > 0.005) {
+      f_face <- min(1, face_coverage * 4.0)
+      composite <- 0.35*f_face + 0.15*f_lap + 0.15*f_center +
+                   0.10*f_detail + 0.10*f_uniformity + 0.05*f_edge + 0.10*f_color_close
     } else {
-      mat <- data / 255.0
+      composite <- 0.25*f_lap + 0.20*f_center + 0.20*f_detail +
+                   0.10*f_uniformity + 0.10*f_edge + 0.15*f_color_close
     }
-    
-    nr <- nrow(mat)
-    nc <- ncol(mat)
-    
-    if (nr < 5 || nc < 5) {
-      return(list(
-        shot_scale = NA_character_,
-        shot_scale_name = NA_character_,
-        subject_coverage = NA_real_
-      ))
-    }
-    
-    # Compute gradient magnitude as salience proxy
-    gx <- mat
-    gx[, -1] <- mat[, -1] - mat[, -nc]
-    gx[, 1] <- 0
-    
-    gy <- mat
-    gy[-1, ] <- mat[-1, ] - mat[-nr, ]
-    gy[1, ] <- 0
-    
-    grad_mag <- sqrt(gx^2 + gy^2)
-    
-    # Threshold for "salient" pixels
-    threshold <- mean(grad_mag) + stats::sd(grad_mag)
-    salient_pixels <- sum(grad_mag > threshold)
-    total_pixels <- length(grad_mag)
-    
-    subject_coverage <- salient_pixels / total_pixels
-    
-    classification <- classify_scale(subject_coverage)
-    
-    list(
-      shot_scale = classification$scale,
-      shot_scale_name = classification$name,
-      subject_coverage = subject_coverage
-    )
+    composite <- max(0, min(1, composite))
+    cl <- classify_score(composite)
+    list(shot_scale = cl$scale, shot_scale_name = cl$name,
+         shot_scale_group = cl$group, subject_coverage = composite)
   }, downsample = downsample, msg = "Classifying shot scales")
-  
+
   tl_images$shot_scale <- purrr::map_chr(results, ~ .x$shot_scale %||% NA_character_)
   tl_images$shot_scale_name <- purrr::map_chr(results, ~ .x$shot_scale_name %||% NA_character_)
+  tl_images$shot_scale_group <- purrr::map_chr(results, ~ .x$shot_scale_group %||% NA_character_)
   tl_images$subject_coverage <- purrr::map_dbl(results, ~ .x$subject_coverage %||% NA_real_)
-  
   tl_images
 }
 
