@@ -130,8 +130,7 @@ Tidylens classifies each shot into **3 broad scale categories** (Close, Medium, 
 ```r
 # CNN method (default when torch installed)
 shots <- video_extract_shots("movie.mp4")
-# Returns: shot_scale (Close/Medium/Long), shot_scale_detail (7-class code),
-#          shot_scale_confidence
+# Returns: shot_scale (Close/Medium/Long), shot_scale_confidence
 
 # Works without torch too (heuristic fallback)
 shots <- video_extract_shots("movie.mp4")  # auto-detects available method

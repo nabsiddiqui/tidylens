@@ -21,8 +21,6 @@ or 224 (CNN).}
 The input tibble with added columns:
 \itemize{
 \item \code{shot_scale}: Broad shot scale group: Close, Medium, or Long.
-\item \code{shot_scale_detail}: Fine-grained code (e.g. ECU, CU, MCU, MS, MLS,
-LS, ELS for CNN; or CS, MFS, FS, WS, EWS for heuristic).
 \item \code{shot_scale_confidence}: CNN confidence for the predicted class
 (CNN method) or composite closeness score 0-1 (heuristic method).
 }

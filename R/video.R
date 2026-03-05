@@ -481,8 +481,6 @@ detect_shot_changes <- function(images,
 #'   - `shot_scale`: Broad shot scale group: Close, Medium, or Long
 #'     (if include_style = TRUE).
 #'
-#'   - `shot_scale_detail`: Fine-grained shot scale code.
-#'
 #'   - `shot_scale_confidence`: CNN confidence or heuristic closeness score.
 #'
 #'   - `frame_path`: Path to representative frame image.
@@ -568,7 +566,6 @@ video_extract_shots <- function(video_path,
   if (include_style) {
     shot_frames <- film_classify_scale(shot_frames, method = "auto")
     shots$shot_scale <- shot_frames$shot_scale
-    shots$shot_scale_detail <- shot_frames$shot_scale_detail
     shots$shot_scale_confidence <- shot_frames$shot_scale_confidence
   }
   
@@ -597,7 +594,6 @@ video_extract_shots <- function(video_path,
   # Add shot scale columns if computed
   if (include_style) {
     result$shot_scale <- shots$shot_scale
-    result$shot_scale_detail <- shots$shot_scale_detail
     result$shot_scale_confidence <- shots$shot_scale_confidence
   }
   
@@ -665,9 +661,6 @@ video_extract_shot_frames <- function(images, shots, position = "middle") {
 #'
 #' @return The input tibble with added columns:
 #'   - `shot_scale`: Broad shot scale group: Close, Medium, or Long.
-#'
-#'   - `shot_scale_detail`: Fine-grained code (e.g. ECU, CU, MCU, MS, MLS,
-#'     LS, ELS for CNN; or CS, MFS, FS, WS, EWS for heuristic).
 #'
 #'   - `shot_scale_confidence`: CNN confidence for the predicted class
 #'     (CNN method) or composite closeness score 0-1 (heuristic method).
@@ -756,19 +749,16 @@ film_classify_scale <- function(tl_images, method = "auto", downsample = 400) {
       label <- classes[pred_idx]
       list(
         shot_scale = unname(class3_map[label]),
-        shot_scale_detail = label,
         shot_scale_confidence = confidence
       )
     }, error = function(e) {
-      list(shot_scale = NA_character_, shot_scale_detail = NA_character_,
+      list(shot_scale = NA_character_,
            shot_scale_confidence = NA_real_)
     })
   }, msg = "Classifying shot scales (CNN)")
 
   tl_images$shot_scale <- purrr::map_chr(results,
     ~ .x$shot_scale %||% NA_character_)
-  tl_images$shot_scale_detail <- purrr::map_chr(results,
-    ~ .x$shot_scale_detail %||% NA_character_)
   tl_images$shot_scale_confidence <- purrr::map_dbl(results,
     ~ .x$shot_scale_confidence %||% NA_real_)
   tl_images
@@ -812,7 +802,7 @@ film_classify_scale <- function(tl_images, method = "auto", downsample = 400) {
     mat <- if (length(dim(gray_data)) == 3) gray_data[,,1] / 255.0 else gray_data / 255.0
     nr <- nrow(mat); nc <- ncol(mat)
     if (nr < 10 || nc < 10) {
-      return(list(shot_scale = NA_character_, shot_scale_detail = NA_character_,
+      return(list(shot_scale = NA_character_,
                   shot_scale_confidence = NA_real_))
     }
 
@@ -877,12 +867,11 @@ film_classify_scale <- function(tl_images, method = "auto", downsample = 400) {
     }
     composite <- max(0, min(1, composite))
     cl <- classify_score(composite)
-    list(shot_scale = cl$group, shot_scale_detail = cl$scale,
+    list(shot_scale = cl$group,
          shot_scale_confidence = composite)
   }, downsample = downsample, msg = "Classifying shot scales")
 
   tl_images$shot_scale <- purrr::map_chr(results, ~ .x$shot_scale %||% NA_character_)
-  tl_images$shot_scale_detail <- purrr::map_chr(results, ~ .x$shot_scale_detail %||% NA_character_)
   tl_images$shot_scale_confidence <- purrr::map_dbl(results, ~ .x$shot_scale_confidence %||% NA_real_)
   tl_images
 }

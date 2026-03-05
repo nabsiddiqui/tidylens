@@ -84,7 +84,6 @@ Columns added by `film_classify_scale()` or `video_extract_shots()`:
 | Column | Type | Description |
 |--------|------|-------------|
 | `shot_scale` | character | Broad group: Close, Medium, or Long |
-| `shot_scale_detail` | character | Fine-grained code (e.g. ECU, CU, MCU, MS, MLS, LS, ELS) |
 | `shot_scale_confidence` | numeric | CNN confidence or heuristic closeness score (0-1) |
 
 ### Shot Scale Groups
