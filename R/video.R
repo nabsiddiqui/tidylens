@@ -569,39 +569,24 @@ video_extract_shots <- function(video_path,
     shots$shot_scale_confidence <- shot_frames$shot_scale_confidence
   }
   
-  # Combine tl_images columns with shot timing columns
-  # Start with tl_images base columns from representative frame
-  result <- tibble::tibble(
-    id = shot_frames$id,
-    source = shot_frames$source,
-    local_path = shot_frames$local_path,
-    width = shot_frames$width,
-    height = shot_frames$height,
-    format = shot_frames$format,
-    aspect_ratio = shot_frames$aspect_ratio,
-    file_size_bytes = shot_frames$file_size_bytes,
-    video_source = video_source_path,  # Track original video
-    # Shot-specific columns
-    shot_id = shots$shot_id,
-    start_time = shots$start_time,
-    end_time = shots$end_time,
-    duration = shots$duration,
-    start_frame = shots$start_frame,
-    end_frame = shots$end_frame,
-    n_frames = shots$n_frames
-  )
-  
-  # Add shot scale columns if computed
+  # Combine representative frame's tl_images columns with shot timing columns
+  shot_cols <- shots[, c("shot_id", "start_time", "end_time", "duration",
+                         "start_frame", "end_frame", "n_frames")]
   if (include_style) {
-    result$shot_scale <- shots$shot_scale
-    result$shot_scale_confidence <- shots$shot_scale_confidence
+    shot_cols$shot_scale <- shots$shot_scale
+    shot_cols$shot_scale_confidence <- shots$shot_scale_confidence
   }
-  
+  result <- dplyr::bind_cols(
+    shot_frames,
+    tibble::tibble(video_source = video_source_path),
+    shot_cols
+  )
+
   # Add the tl_images class so extract_* functions work on it
   class(result) <- c("tl_images", class(result))
-  
+
   cli::cli_alert_success("Extracted {nrow(result)} shots with timing")
-  
+
   result
 }
 

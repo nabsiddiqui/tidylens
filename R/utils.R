@@ -5,15 +5,6 @@
 #' @noRd
 NULL
 
-# Global variable declarations for R CMD check
-# These are column names used in dplyr pipelines
-utils::globalVariables(c(
-  "shot_scale",
-  "count",
-  "proportion",
-  "pct"
-))
-
 #' Downsample an image for analysis
 #'
 #' @param img A magick image object.
