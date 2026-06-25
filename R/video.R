@@ -706,9 +706,5 @@ film_classify_scale <- function(tl_images) {
     })
   }, downsample = 400, msg = "Classifying shot scales")
 
-  tl_images$shot_scale <- purrr::map_chr(results,
-    ~ .x$shot_scale %||% NA_character_)
-  tl_images$shot_scale_confidence <- purrr::map_dbl(results,
-    ~ .x$shot_scale_confidence %||% NA_real_)
-  tl_images
+  bind_results(tl_images, results)
 }

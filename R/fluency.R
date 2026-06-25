@@ -94,12 +94,7 @@ extract_fluency_metrics <- function(tl_images, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting fluency metrics")
   
-  tl_images$simplicity <- purrr::map_dbl(results, ~ .x$simplicity %||% NA_real_)
-  tl_images$symmetry_h <- purrr::map_dbl(results, ~ .x$symmetry_h %||% NA_real_)
-  tl_images$symmetry_v <- purrr::map_dbl(results, ~ .x$symmetry_v %||% NA_real_)
-  tl_images$balance <- purrr::map_dbl(results, ~ .x$balance %||% NA_real_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Compute rule of thirds adherence
@@ -188,9 +183,7 @@ extract_rule_of_thirds <- function(tl_images, downsample = 200) {
     list(rule_of_thirds = score)
   }, downsample = downsample, msg = "Computing rule of thirds")
   
-  tl_images$rule_of_thirds <- purrr::map_dbl(results, ~ .x$rule_of_thirds %||% NA_real_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Extract visual complexity
@@ -254,9 +247,7 @@ extract_visual_complexity <- function(tl_images, downsample = 200) {
     list(visual_complexity = complexity)
   }, downsample = downsample, msg = "Extracting visual complexity")
   
-  tl_images$visual_complexity <- purrr::map_dbl(results, ~ .x$visual_complexity %||% NA_real_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Analyze center bias
@@ -342,10 +333,5 @@ extract_center_bias <- function(tl_images, center_ratio = 0.5, downsample = 200)
     )
   }, downsample = downsample, msg = "Analyzing center bias")
   
-  tl_images$center_bias <- purrr::map_dbl(results, ~ .x$center_bias %||% NA_real_)
-  tl_images$center_brightness <- purrr::map_dbl(results, ~ .x$center_brightness %||% NA_real_)
-  tl_images$peripheral_brightness <- purrr::map_dbl(results, ~ .x$peripheral_brightness %||% NA_real_)
-  tl_images$center_salience <- purrr::map_dbl(results, ~ .x$center_salience %||% NA_real_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }

@@ -15,7 +15,7 @@
 #' @importFrom cli cli_alert_info cli_alert_success cli_alert_warning cli_abort cli_progress_bar cli_progress_update cli_progress_done
 #' @importFrom fs path_file path_ext path_ext_remove dir_ls file_exists
 #' @importFrom tools file_ext file_path_sans_ext
-#' @importFrom stats kmeans var sd median quantile fft predict
+#' @importFrom stats kmeans var sd median quantile fft predict setNames
 #' @importFrom utils adist head
 #' @importFrom graphics hist
 "_PACKAGE"

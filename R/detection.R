@@ -123,7 +123,5 @@ detect_skin_tones <- function(tl_images, downsample = 200) {
     list(skin_tone_prop = skin_prop)
   }, downsample = downsample, msg = "Detecting skin tones")
   
-  tl_images$skin_tone_prop <- purrr::map_dbl(results, ~ .x$skin_tone_prop %||% NA_real_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }

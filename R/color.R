@@ -48,10 +48,7 @@ extract_brightness <- function(tl_images, downsample = 200, method = "mean") {
     }
   }, downsample = downsample, msg = "Extracting brightness")
   
-  tl_images$brightness <- purrr::map_dbl(results, ~ .x$brightness %||% NA_real_)
-  tl_images$brightness_std <- purrr::map_dbl(results, ~ .x$brightness_std %||% NA_real_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Extract mean color from images
@@ -94,12 +91,7 @@ extract_color_mean <- function(tl_images, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting mean color")
   
-  tl_images$mean_r <- purrr::map_dbl(results, ~ .x$mean_r %||% NA_real_)
-  tl_images$mean_g <- purrr::map_dbl(results, ~ .x$mean_g %||% NA_real_)
-  tl_images$mean_b <- purrr::map_dbl(results, ~ .x$mean_b %||% NA_real_)
-  tl_images$mean_hex <- purrr::map_chr(results, ~ .x$mean_hex %||% NA_character_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Extract saturation from images
@@ -142,11 +134,7 @@ extract_saturation <- function(tl_images, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting saturation")
   
-  tl_images$saturation_mean <- purrr::map_dbl(results, ~ .x$saturation_mean %||% NA_real_)
-  tl_images$saturation_median <- purrr::map_dbl(results, ~ .x$saturation_median %||% NA_real_)
-  tl_images$saturation_std <- purrr::map_dbl(results, ~ .x$saturation_std %||% NA_real_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Compute colourfulness (M3 metric)
@@ -188,9 +176,7 @@ extract_colourfulness <- function(tl_images, downsample = 200) {
     list(colourfulness = M3)
   }, downsample = downsample, msg = "Computing colourfulness")
   
-  tl_images$colourfulness <- purrr::map_dbl(results, ~ .x$colourfulness %||% NA_real_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Extract color warmth/coolness
@@ -240,10 +226,7 @@ extract_warmth <- function(tl_images, downsample = 200) {
     list(warmth = warmth, tint = tint)
   }, downsample = downsample, msg = "Extracting warmth")
   
-  tl_images$warmth <- purrr::map_dbl(results, ~ .x$warmth %||% NA_real_)
-  tl_images$tint <- purrr::map_dbl(results, ~ .x$tint %||% NA_real_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Extract dominant color
@@ -287,9 +270,9 @@ extract_dominant_color <- function(tl_images, n_colors = 1, downsample = 100) {
       proportion <- max(cluster_sizes) / n_pixels
       
       list(
-        dominant_color_r = round(dominant_rgb[1]),
-        dominant_color_g = round(dominant_rgb[2]),
-        dominant_color_b = round(dominant_rgb[3]),
+        dominant_color_r = as.integer(round(dominant_rgb[1])),
+        dominant_color_g = as.integer(round(dominant_rgb[2])),
+        dominant_color_b = as.integer(round(dominant_rgb[3])),
         dominant_color_hex = grDevices::rgb(
           dominant_rgb[1]/255, dominant_rgb[2]/255, dominant_rgb[3]/255
         ),
@@ -306,13 +289,7 @@ extract_dominant_color <- function(tl_images, n_colors = 1, downsample = 100) {
     })
   }, downsample = downsample, msg = "Extracting dominant color")
   
-  tl_images$dominant_color_r <- purrr::map_int(results, ~ as.integer(.x$dominant_color_r))
-  tl_images$dominant_color_g <- purrr::map_int(results, ~ as.integer(.x$dominant_color_g))
-  tl_images$dominant_color_b <- purrr::map_int(results, ~ as.integer(.x$dominant_color_b))
-  tl_images$dominant_color_hex <- purrr::map_chr(results, ~ .x$dominant_color_hex %||% NA_character_)
-  tl_images$dominant_color_proportion <- purrr::map_dbl(results, ~ .x$dominant_color_proportion %||% NA_real_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Extract color variance
@@ -358,12 +335,7 @@ extract_color_variance <- function(tl_images, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting color variance")
   
-  tl_images$color_variance <- purrr::map_dbl(results, ~ .x$color_variance %||% NA_real_)
-  tl_images$color_range_r <- purrr::map_dbl(results, ~ .x$color_range_r %||% NA_real_)
-  tl_images$color_range_g <- purrr::map_dbl(results, ~ .x$color_range_g %||% NA_real_)
-  tl_images$color_range_b <- purrr::map_dbl(results, ~ .x$color_range_b %||% NA_real_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Extract median color
@@ -402,12 +374,7 @@ extract_color_median <- function(tl_images, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting median color")
   
-  tl_images$median_r <- purrr::map_dbl(results, ~ .x$median_r %||% NA_real_)
-  tl_images$median_g <- purrr::map_dbl(results, ~ .x$median_g %||% NA_real_)
-  tl_images$median_b <- purrr::map_dbl(results, ~ .x$median_b %||% NA_real_)
-  tl_images$median_hex <- purrr::map_chr(results, ~ .x$median_hex %||% NA_character_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Extract mode color
@@ -465,13 +432,7 @@ extract_color_mode <- function(tl_images, n_bins = 32, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting mode color")
   
-  tl_images$mode_r <- purrr::map_dbl(results, ~ .x$mode_r %||% NA_real_)
-  tl_images$mode_g <- purrr::map_dbl(results, ~ .x$mode_g %||% NA_real_)
-  tl_images$mode_b <- purrr::map_dbl(results, ~ .x$mode_b %||% NA_real_)
-  tl_images$mode_hex <- purrr::map_chr(results, ~ .x$mode_hex %||% NA_character_)
-  tl_images$mode_frequency <- purrr::map_dbl(results, ~ .x$mode_frequency %||% NA_real_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Extract hue histogram from images
@@ -578,13 +539,7 @@ extract_hue_histogram <- function(tl_images, n_bins = 12, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting hue histogram")
   
-  tl_images$dominant_hue <- purrr::map_dbl(results, ~ .x$dominant_hue %||% NA_real_)
-  tl_images$dominant_hue_name <- purrr::map_chr(results, ~ .x$dominant_hue_name %||% NA_character_)
-  tl_images$dominant_hue_proportion <- purrr::map_dbl(results, ~ .x$dominant_hue_proportion %||% NA_real_)
-  tl_images$hue_entropy <- purrr::map_dbl(results, ~ .x$hue_entropy %||% NA_real_)
-  tl_images$hue_concentration <- purrr::map_dbl(results, ~ .x$hue_concentration %||% NA_real_)
-  
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Extract Color Moments
@@ -658,40 +613,17 @@ extract_color_moments <- function(tl_images, downsample = 200, color_space = "rg
     c2 <- as.numeric(data[, , 2]) / 255.0
     c3 <- as.numeric(data[, , 3]) / 255.0
     
-    list(
-      c1_mean = mean(c1),
-      c1_std = stats::sd(c1),
-      c1_skew = calc_skewness(c1),
-      c2_mean = mean(c2),
-      c2_std = stats::sd(c2),
-      c2_skew = calc_skewness(c2),
-      c3_mean = mean(c3),
-      c3_std = stats::sd(c3),
-      c3_skew = calc_skewness(c3)
-    )
+    pfx <- if (color_space == "rgb") c("r", "g", "b") else c("l", "a", "b")
+    setNames(list(
+      mean(c1), stats::sd(c1), calc_skewness(c1),
+      mean(c2), stats::sd(c2), calc_skewness(c2),
+      mean(c3), stats::sd(c3), calc_skewness(c3)
+    ), c(
+      paste0("cm_", pfx[1], "_", c("mean","std","skew")),
+      paste0("cm_", pfx[2], "_", c("mean","std","skew")),
+      paste0("cm_", pfx[3], "_", c("mean","std","skew"))
+    ))
   }, downsample = downsample, msg = paste0("Extracting color moments (", color_space, ")"))
   
-  if (color_space == "rgb") {
-    tl_images$cm_r_mean <- purrr::map_dbl(results, ~ .x$c1_mean %||% NA_real_)
-    tl_images$cm_r_std <- purrr::map_dbl(results, ~ .x$c1_std %||% NA_real_)
-    tl_images$cm_r_skew <- purrr::map_dbl(results, ~ .x$c1_skew %||% NA_real_)
-    tl_images$cm_g_mean <- purrr::map_dbl(results, ~ .x$c2_mean %||% NA_real_)
-    tl_images$cm_g_std <- purrr::map_dbl(results, ~ .x$c2_std %||% NA_real_)
-    tl_images$cm_g_skew <- purrr::map_dbl(results, ~ .x$c2_skew %||% NA_real_)
-    tl_images$cm_b_mean <- purrr::map_dbl(results, ~ .x$c3_mean %||% NA_real_)
-    tl_images$cm_b_std <- purrr::map_dbl(results, ~ .x$c3_std %||% NA_real_)
-    tl_images$cm_b_skew <- purrr::map_dbl(results, ~ .x$c3_skew %||% NA_real_)
-  } else {
-    tl_images$cm_l_mean <- purrr::map_dbl(results, ~ .x$c1_mean %||% NA_real_)
-    tl_images$cm_l_std <- purrr::map_dbl(results, ~ .x$c1_std %||% NA_real_)
-    tl_images$cm_l_skew <- purrr::map_dbl(results, ~ .x$c1_skew %||% NA_real_)
-    tl_images$cm_a_mean <- purrr::map_dbl(results, ~ .x$c2_mean %||% NA_real_)
-    tl_images$cm_a_std <- purrr::map_dbl(results, ~ .x$c2_std %||% NA_real_)
-    tl_images$cm_a_skew <- purrr::map_dbl(results, ~ .x$c2_skew %||% NA_real_)
-    tl_images$cm_b_mean <- purrr::map_dbl(results, ~ .x$c3_mean %||% NA_real_)
-    tl_images$cm_b_std <- purrr::map_dbl(results, ~ .x$c3_std %||% NA_real_)
-    tl_images$cm_b_skew <- purrr::map_dbl(results, ~ .x$c3_skew %||% NA_real_)
-  }
-  
-  tl_images
+  bind_results(tl_images, results)
 }

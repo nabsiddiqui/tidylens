@@ -78,3 +78,41 @@ map_images <- function(tl_images, fn, downsample = NULL, msg = "Processing image
   cli::cli_progress_done()
   results
 }
+
+#' Bind per-image results onto a tl_images tibble as columns
+#'
+#' Converts a list of named lists (one per image, possibly NULL on failure)
+#' into typed columns appended to `tl_images`. Column types are inferred
+#' from the first non-NULL result: doubles stay doubles, integers stay
+#' integers, characters stay characters. NULL/missing entries become the
+#' appropriate NA for the column type.
+#'
+#' @param tl_images A tl_images tibble.
+#' @param results List of named lists from [map_images()].
+#' @return `tl_images` with result fields added as columns.
+#'
+#' @keywords internal
+#' @noRd
+bind_results <- function(tl_images, results) {
+  non_null <- purrr::discard(results, is.null)
+  if (length(non_null) == 0) return(tl_images)
+  first <- non_null[[1]]
+
+  for (field in names(first)) {
+    vals <- lapply(results, function(x) {
+      if (is.null(x)) return(NA) else x[[field]]
+    })
+    tl_images[[field]] <- coerce_column(vals)
+  }
+
+  tl_images
+}
+
+coerce_column <- function(vals) {
+  non_na <- purrr::discard(vals, function(v) length(v) == 0 || (length(v) == 1 && is.na(v)))
+  template <- non_na[[1]]
+  if (is.null(template)) return(NA_real_)          # all failed -> numeric NA
+  if (is.integer(template)) return(vapply(vals, function(v) if (is.null(v) || is.na(v)) NA_integer_ else as.integer(v), integer(1)))
+  if (is.character(template)) return(vapply(vals, function(v) if (is.null(v) || is.na(v)) NA_character_ else as.character(v), character(1)))
+  vapply(vals, function(v) if (is.null(v) || is.na(v)) NA_real_ else as.numeric(v), numeric(1))
+}
