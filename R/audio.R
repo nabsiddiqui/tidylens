@@ -251,66 +251,7 @@ extract_audio_features <- function(tl_images, video_path = NULL, fps = NULL) {
 #' @family audio
 #' @export
 extract_audio_rms <- function(tl_images, video_path = NULL, fps = NULL) {
-  
-  if (!requireNamespace("tuneR", quietly = TRUE)) {
-    cli::cli_abort("Package {.pkg tuneR} is required. Install with: install.packages('tuneR')")
-  }
-  if (!requireNamespace("av", quietly = TRUE)) {
-    cli::cli_abort("Package {.pkg av} is required. Install with: install.packages('av')")
-  }
-  
-  n <- nrow(tl_images)
-  if (n == 0) return(tl_images)
-  
-  # Get video path
-  if (is.null(video_path)) {
-    if ("video_source" %in% names(tl_images)) {
-      video_path <- unique(tl_images$video_source)[1]
-    } else {
-      cli::cli_abort("No video path provided.")
-    }
-  }
-  
-  # Extract and load audio
-  audio_path <- tempfile(fileext = ".wav")
-  av::av_audio_convert(video_path, output = audio_path)
-  audio <- tuneR::readWave(audio_path)
-  
-  if (audio@stereo) {
-    audio <- tuneR::mono(audio, which = "both")
-  }
-  
-  sample_rate <- audio@samp.rate
-  audio_data <- audio@left / 32768  # Normalize
-  
-  # Get timing
-  has_timing <- all(c("start_time", "end_time") %in% names(tl_images))
-  
-  if (has_timing) {
-    start_times <- tl_images$start_time
-    end_times <- tl_images$end_time
-  } else {
-    if (is.null(fps)) cli::cli_abort("fps required without timing columns")
-    frame_indices <- seq_len(n)
-    start_times <- (frame_indices - 1) / fps
-    end_times <- frame_indices / fps
-  }
-  
-  # Compute RMS for each segment
-  audio_rms <- vapply(seq_len(n), function(i) {
-    start_sample <- max(1, floor(start_times[i] * sample_rate) + 1)
-    end_sample <- min(length(audio_data), ceiling(end_times[i] * sample_rate))
-    
-    if (end_sample <= start_sample) return(NA_real_)
-    
-    segment <- audio_data[start_sample:end_sample]
-    sqrt(mean(segment^2))
-  }, numeric(1))
-  
-  unlink(audio_path)
-  
-  result <- tl_images
-  result$audio_rms <- audio_rms
-  
-  result
+  full <- extract_audio_features(tl_images, video_path = video_path, fps = fps)
+  keep <- c(names(tl_images), "audio_rms")
+  full[, keep]
 }

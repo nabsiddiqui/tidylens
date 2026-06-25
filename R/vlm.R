@@ -54,31 +54,11 @@ vlm_describe <- function(tl_images,
   validate_tl_images(tl_images)
   check_vlm_packages()
 
-  n <- nrow(tl_images)
-  descriptions <- character(n)
+  results <- vlm_map(tl_images, prompt, function(resp) {
+    list(vlm_description = trimws(resp))
+  }, model, base_url, downsample, "Describing images with VLM")
 
-  cli::cli_progress_bar("Describing images with VLM", total = n)
-
-  for (i in seq_len(n)) {
-    tryCatch({
-      img <- magick::image_read(tl_images$local_path[i])
-      img <- magick::image_resize(img, paste0(downsample, "x"))
-
-      img_data <- magick::image_write(img, format = "jpeg")
-      img_base64 <- base64enc::base64encode(img_data)
-
-      descriptions[i] <- trimws(vlm_ollama_vision(img_base64, prompt, model, base_url))
-    }, error = function(e) {
-      descriptions[i] <<- paste("Error:", conditionMessage(e))
-    })
-
-    cli::cli_progress_update()
-  }
-
-  cli::cli_progress_done()
-
-  tl_images$vlm_description <- descriptions
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Classify images using VLM
@@ -114,35 +94,13 @@ vlm_classify <- function(tl_images,
     "Respond with ONLY the category name, nothing else."
   )
 
-  n <- nrow(tl_images)
-  vlm_categories <- character(n)
+  results <- vlm_map(tl_images, prompt, function(resp) {
+    response_clean <- tolower(trimws(resp))
+    matched <- categories[which.min(adist(response_clean, tolower(categories)))]
+    list(vlm_category = matched)
+  }, model, base_url, downsample, "Classifying images")
 
-  cli::cli_progress_bar("Classifying images", total = n)
-
-  for (i in seq_len(n)) {
-    tryCatch({
-      img <- magick::image_read(tl_images$local_path[i])
-      img <- magick::image_resize(img, paste0(downsample, "x"))
-      img_data <- magick::image_write(img, format = "jpeg")
-      img_base64 <- base64enc::base64encode(img_data)
-
-      response <- vlm_ollama_vision(img_base64, prompt, model, base_url)
-
-      response_clean <- tolower(trimws(response))
-      matched <- categories[which.min(adist(response_clean, tolower(categories)))]
-      vlm_categories[i] <- matched
-
-    }, error = function(e) {
-      vlm_categories[i] <<- NA_character_
-    })
-
-    cli::cli_progress_update()
-  }
-
-  cli::cli_progress_done()
-
-  tl_images$vlm_category <- vlm_categories
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Analyze sentiment/mood of images using VLM
@@ -179,55 +137,20 @@ vlm_sentiment <- function(tl_images,
     "INTENSITY: [low/medium/high]"
   )
 
-  n <- nrow(tl_images)
-  moods <- character(n)
-  valences <- character(n)
-  intensities <- character(n)
+  results <- vlm_map(tl_images, prompt, function(resp) {
+    lines <- strsplit(resp, "\n")[[1]]
+    mood_line <- grep("MOOD:", lines, value = TRUE, ignore.case = TRUE)
+    valence_line <- grep("VALENCE:", lines, value = TRUE, ignore.case = TRUE)
+    intensity_line <- grep("INTENSITY:", lines, value = TRUE, ignore.case = TRUE)
 
-  cli::cli_progress_bar("Analyzing mood", total = n)
+    list(
+      vlm_mood = if (length(mood_line) > 0) trimws(gsub("MOOD:", "", mood_line[1], ignore.case = TRUE)) else NA_character_,
+      vlm_mood_valence = if (length(valence_line) > 0) trimws(gsub("VALENCE:", "", valence_line[1], ignore.case = TRUE)) else NA_character_,
+      vlm_mood_intensity = if (length(intensity_line) > 0) trimws(gsub("INTENSITY:", "", intensity_line[1], ignore.case = TRUE)) else NA_character_
+    )
+  }, model, base_url, downsample, "Analyzing mood")
 
-  for (i in seq_len(n)) {
-    tryCatch({
-      img <- magick::image_read(tl_images$local_path[i])
-      img <- magick::image_resize(img, paste0(downsample, "x"))
-      img_data <- magick::image_write(img, format = "jpeg")
-      img_base64 <- base64enc::base64encode(img_data)
-
-      response <- vlm_ollama_vision(img_base64, prompt, model, base_url)
-
-      lines <- strsplit(response, "\n")[[1]]
-      mood_line <- grep("MOOD:", lines, value = TRUE, ignore.case = TRUE)
-      valence_line <- grep("VALENCE:", lines, value = TRUE, ignore.case = TRUE)
-      intensity_line <- grep("INTENSITY:", lines, value = TRUE, ignore.case = TRUE)
-
-      moods[i] <- if (length(mood_line) > 0) {
-        trimws(gsub("MOOD:", "", mood_line[1], ignore.case = TRUE))
-      } else NA_character_
-
-      valences[i] <- if (length(valence_line) > 0) {
-        trimws(gsub("VALENCE:", "", valence_line[1], ignore.case = TRUE))
-      } else NA_character_
-
-      intensities[i] <- if (length(intensity_line) > 0) {
-        trimws(gsub("INTENSITY:", "", intensity_line[1], ignore.case = TRUE))
-      } else NA_character_
-
-    }, error = function(e) {
-      moods[i] <<- NA_character_
-      valences[i] <<- NA_character_
-      intensities[i] <<- NA_character_
-    })
-
-    cli::cli_progress_update()
-  }
-
-  cli::cli_progress_done()
-
-  tl_images$vlm_mood <- moods
-  tl_images$vlm_mood_valence <- valences
-  tl_images$vlm_mood_intensity <- intensities
-
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Recognize objects in images using VLM
@@ -264,55 +187,20 @@ vlm_recognize <- function(tl_images,
     "TEXT: [any visible text, or 'none']"
   )
 
-  n <- nrow(tl_images)
-  objects <- character(n)
-  people <- character(n)
-  texts <- character(n)
+  results <- vlm_map(tl_images, prompt, function(resp) {
+    lines <- strsplit(resp, "\n")[[1]]
+    obj_line <- grep("OBJECTS:", lines, value = TRUE, ignore.case = TRUE)
+    ppl_line <- grep("PEOPLE:", lines, value = TRUE, ignore.case = TRUE)
+    txt_line <- grep("TEXT:", lines, value = TRUE, ignore.case = TRUE)
 
-  cli::cli_progress_bar("Recognizing objects", total = n)
+    list(
+      vlm_objects = if (length(obj_line) > 0) trimws(gsub("OBJECTS:", "", obj_line[1], ignore.case = TRUE)) else NA_character_,
+      vlm_people_count = if (length(ppl_line) > 0) trimws(gsub("PEOPLE:", "", ppl_line[1], ignore.case = TRUE)) else NA_character_,
+      vlm_text_detected = if (length(txt_line) > 0) trimws(gsub("TEXT:", "", txt_line[1], ignore.case = TRUE)) else NA_character_
+    )
+  }, model, base_url, downsample, "Recognizing objects")
 
-  for (i in seq_len(n)) {
-    tryCatch({
-      img <- magick::image_read(tl_images$local_path[i])
-      img <- magick::image_resize(img, paste0(downsample, "x"))
-      img_data <- magick::image_write(img, format = "jpeg")
-      img_base64 <- base64enc::base64encode(img_data)
-
-      response <- vlm_ollama_vision(img_base64, prompt, model, base_url)
-
-      lines <- strsplit(response, "\n")[[1]]
-      obj_line <- grep("OBJECTS:", lines, value = TRUE, ignore.case = TRUE)
-      ppl_line <- grep("PEOPLE:", lines, value = TRUE, ignore.case = TRUE)
-      txt_line <- grep("TEXT:", lines, value = TRUE, ignore.case = TRUE)
-
-      objects[i] <- if (length(obj_line) > 0) {
-        trimws(gsub("OBJECTS:", "", obj_line[1], ignore.case = TRUE))
-      } else NA_character_
-
-      people[i] <- if (length(ppl_line) > 0) {
-        trimws(gsub("PEOPLE:", "", ppl_line[1], ignore.case = TRUE))
-      } else NA_character_
-
-      texts[i] <- if (length(txt_line) > 0) {
-        trimws(gsub("TEXT:", "", txt_line[1], ignore.case = TRUE))
-      } else NA_character_
-
-    }, error = function(e) {
-      objects[i] <<- NA_character_
-      people[i] <<- NA_character_
-      texts[i] <<- NA_character_
-    })
-
-    cli::cli_progress_update()
-  }
-
-  cli::cli_progress_done()
-
-  tl_images$vlm_objects <- objects
-  tl_images$vlm_people_count <- people
-  tl_images$vlm_text_detected <- texts
-
-  tl_images
+  bind_results(tl_images, results)
 }
 
 #' Classify shot scale using VLM
@@ -370,39 +258,18 @@ vlm_scale <- function(tl_images,
     "Respond with ONLY the category name, nothing else."
   )
 
-  n <- nrow(tl_images)
-  scales <- character(n)
-  confidences <- numeric(n)
   valid <- c("close", "medium", "long")
 
-  cli::cli_progress_bar("Classifying shot scales (VLM)", total = n)
+  results <- vlm_map(tl_images, prompt, function(resp) {
+    response_clean <- tolower(trimws(resp))
+    matched <- valid[which.min(adist(response_clean, valid))]
+    list(
+      shot_scale = tools::toTitleCase(matched),
+      shot_scale_confidence = if (any(adist(response_clean, valid) <= 2)) 1.0 else 0.0
+    )
+  }, model, base_url, downsample, "Classifying shot scales (VLM)")
 
-  for (i in seq_len(n)) {
-    tryCatch({
-      img <- magick::image_read(tl_images$local_path[i])
-      img <- magick::image_resize(img, paste0(downsample, "x"))
-      img_data <- magick::image_write(img, format = "jpeg")
-      img_base64 <- base64enc::base64encode(img_data)
-
-      response <- vlm_ollama_vision(img_base64, prompt, model, base_url)
-      response_clean <- tolower(trimws(response))
-
-      matched <- valid[which.min(adist(response_clean, valid))]
-      scales[i] <- tools::toTitleCase(matched)
-      confidences[i] <- if (any(adist(response_clean, valid) <= 2)) 1.0 else 0.0
-    }, error = function(e) {
-      scales[i] <<- NA_character_
-      confidences[i] <<- NA_real_
-    })
-
-    cli::cli_progress_update()
-  }
-
-  cli::cli_progress_done()
-
-  tl_images$shot_scale <- scales
-  tl_images$shot_scale_confidence <- confidences
-  tl_images
+  bind_results(tl_images, results)
 }
 
 # ============= Internal helper functions =============
@@ -438,4 +305,40 @@ vlm_ollama_vision <- function(image_base64, prompt, model, base_url) {
 
   result <- httr2::resp_body_json(resp)
   result$response
+}
+
+#' Apply a prompt + parse function over images via Ollama VLM
+#'
+#' Shared body for vlm_describe/classify/sentiment/recognize/scale:
+#' read -> resize -> base64 -> vlm_ollama_vision -> parse_fn.
+#'
+#' @param tl_images A tl_images tibble.
+#' @param prompt Prompt string.
+#' @param parse_fn function(response_str) -> named list of columns.
+#' @param model Model name.
+#' @param base_url Ollama base URL.
+#' @param downsample Max image dimension.
+#' @param msg Progress bar message.
+#' @return List of parsed results (one per image).
+#' @noRd
+vlm_map <- function(tl_images, prompt, parse_fn, model, base_url, downsample, msg) {
+  n <- nrow(tl_images)
+  results <- vector("list", n)
+
+  cli::cli_progress_bar(msg, total = n)
+
+  for (i in seq_len(n)) {
+    results[[i]] <- tryCatch({
+      img <- magick::image_read(tl_images$local_path[i])
+      img <- magick::image_resize(img, paste0(downsample, "x"))
+      img_data <- magick::image_write(img, format = "jpeg")
+      img_base64 <- base64enc::base64encode(img_data)
+      response <- vlm_ollama_vision(img_base64, prompt, model, base_url)
+      parse_fn(response)
+    }, error = function(e) NULL)
+    cli::cli_progress_update()
+  }
+
+  cli::cli_progress_done()
+  results
 }
