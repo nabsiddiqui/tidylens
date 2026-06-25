@@ -39,21 +39,6 @@ downsample_image <- function(img, max_side = 200) {
   magick::image_resize(img, paste0(new_width, "x", new_height))
 }
 
-#' Convert magick image to matrix
-#'
-#' @param img A magick image object.
-#' @param channel Which channel(s) to extract.
-#'
-#' @return Numeric matrix or array.
-#'
-#' @keywords internal
-#' @noRd
-image_to_matrix <- function(img, channel = "rgb") {
-  arr <- as.integer(magick::image_data(img, channels = "rgb"))
-  arr <- arr / 255.0
-  arr
-}
-
 #' Read and optionally downsample an image
 #'
 #' @param path Path to image file.

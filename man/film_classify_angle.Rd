@@ -42,6 +42,6 @@ This is an estimation based on visual heuristics:
 \item Dutch angles have tilted horizontal lines
 }
 
-For more accurate detection, consider using the LLM functions to classify angles.
+For more accurate detection, consider using the VLM functions to classify angles.
 }
 }

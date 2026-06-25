@@ -392,7 +392,7 @@ shots_with_audio |>
 
 ---
 
-# LLM Vision (Ollama)
+# VLM Vision (Ollama)
 
 Tidylens integrates with **Ollama** for AI-powered image analysis:
 
@@ -411,29 +411,29 @@ ollama pull qwen2.5vl:7b
 
 ```r
 # Check setup
-llm_check_dependencies()
-llm_list_models()
+vlm_check_dependencies()
+vlm_list_models()
 ```
 
 ## Usage
 
 ```r
 # Describe images
-images <- llm_describe(images, model = "qwen2.5vl:7b")
-# Adds: llm_description column
+images <- vlm_describe(images, model = "qwen2.5vl:7b")
+# Adds: vlm_description column
 
 # Classify into categories
-images <- llm_classify(images, 
+images <- vlm_classify(images, 
                        categories = c("indoor", "outdoor", "portrait", "landscape"))
-# Adds: llm_category column
+# Adds: vlm_category column
 
 # Analyze sentiment/mood
-images <- llm_sentiment(images)
-# Adds: llm_mood, llm_sentiment columns
+images <- vlm_sentiment(images)
+# Adds: vlm_mood, vlm_mood_valence, vlm_mood_intensity columns
 
 # Object recognition
-images <- llm_recognize(images)
-# Adds: llm_objects column
+images <- vlm_recognize(images)
+# Adds: vlm_objects, vlm_people_count, vlm_text_detected columns
 ```
 
 ---
@@ -559,17 +559,18 @@ ggplot(shots, aes(x = duration)) +
 | `extract_audio_features()` | Full audio analysis per shot/frame (7 columns) |
 | `extract_audio_rms()` | Lightweight loudness only |
 
-## LLM Vision (`llm_*`)
+## VLM Vision (`vlm_*`)
 | Function | Description |
 |----------|-------------|
-| `llm_describe()` | Natural language descriptions |
-| `llm_classify()` | Category classification |
-| `llm_sentiment()` | Mood/sentiment analysis |
-| `llm_recognize()` | Object recognition |
-| `llm_check_ollama()` | Verify Ollama is running |
-| `llm_list_models()` | List recommended models |
-| `llm_pull_model()` | Download a model |
-| `llm_check_dependencies()` | Verify all LLM requirements |
+| `vlm_describe()` | Natural language descriptions |
+| `vlm_classify()` | Category classification |
+| `vlm_sentiment()` | Mood/sentiment analysis |
+| `vlm_recognize()` | Object recognition |
+| `vlm_scale()` | VLM-based shot scale classification |
+| `vlm_check_ollama()` | Verify Ollama is running |
+| `vlm_list_models()` | List recommended models |
+| `vlm_pull_model()` | Download a model |
+| `vlm_check_dependencies()` | Verify all VLM requirements |
 
 ---
 

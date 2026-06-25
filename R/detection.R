@@ -127,8 +127,3 @@ detect_skin_tones <- function(tl_images, downsample = 200) {
   
   tl_images
 }
-
-# Null-coalescing operator
-if (!exists("%||%")) {
-  `%||%` <- function(x, y) if (is.null(x)) y else x
-}

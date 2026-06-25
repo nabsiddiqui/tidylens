@@ -349,8 +349,3 @@ extract_center_bias <- function(tl_images, center_ratio = 0.5, downsample = 200)
   
   tl_images
 }
-
-# Null-coalescing operator
-if (!exists("%||%")) {
-  `%||%` <- function(x, y) if (is.null(x)) y else x
-}

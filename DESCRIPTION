@@ -26,6 +26,7 @@ Imports:
 Suggests:
     av,
     tuneR,
+    ranger,
     torch,
     torchvision,
     httr2,

@@ -39,7 +39,7 @@ A tibble with one row per shot containing:
 \item \code{n_frames}: Number of frames in shot.
 \item \code{shot_scale}: Broad shot scale group: Close, Medium, or Long
 (if include_style = TRUE).
-\item \code{shot_scale_confidence}: CNN confidence or heuristic closeness score.
+\item \code{shot_scale_confidence}: Random Forest class probability for the predicted shot scale.
 \item \code{frame_path}: Path to representative frame image.
 }
 }

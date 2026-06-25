@@ -261,7 +261,7 @@ film_summarize_scales <- function(shots) {
 #' - Low angles tend to show more sky (horizon low)
 #' - Dutch angles have tilted horizontal lines
 #'
-#' For more accurate detection, consider using the LLM functions to classify angles.
+#' For more accurate detection, consider using the VLM functions to classify angles.
 #'
 #' @export
 film_classify_angle <- function(tl_images, downsample = 300) {

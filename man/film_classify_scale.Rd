@@ -2,35 +2,30 @@
 % Please edit documentation in R/video.R
 \name{film_classify_scale}
 \alias{film_classify_scale}
-\title{Classify shot style/scale}
+\title{Classify shot scale}
 \usage{
-film_classify_scale(tl_images, method = "auto", downsample = 400)
+film_classify_scale(tl_images)
 }
 \arguments{
 \item{tl_images}{A tl_images tibble.}
-
-\item{method}{Detection method: \code{"cnn"} (ResNet-18, requires torch +
-torchvision), \code{"multi_feature"} (lightweight heuristic), \code{"salience"}
-(alias for multi_feature), or \code{"auto"} (CNN if torch available, else
-multi_feature). Default \code{"auto"}.}
-
-\item{downsample}{Maximum side length for analysis. Default 400 (heuristic)
-or 224 (CNN).}
 }
 \value{
 The input tibble with added columns:
 \itemize{
 \item \code{shot_scale}: Broad shot scale group: Close, Medium, or Long.
-\item \code{shot_scale_confidence}: CNN confidence for the predicted class
-(CNN method) or composite closeness score 0-1 (heuristic method).
+\item \code{shot_scale_confidence}: Random Forest class probability for the
+predicted class (a value between 0 and 1).
 }
 }
 \description{
-Classify shots based on visual features to determine the cinematographic
-shot scale. When the \code{torch} and \code{torchvision} packages are available, a
-pre-trained ResNet-18 feature extractor with a linear classifier is used
-(trained on the CineScale dataset; ~85\\% 3-class accuracy on CPU). Otherwise
-a lightweight multi-feature heuristic is used as a fallback.
+Classify the cinematographic shot scale of each image using a classical
+Random Forest trained on engineered features. The classifier follows
+Canini, Benini & Leonardi (2011): it extracts interpretable, formula-based
+features — spectral residual saliency (Hou & Zhang, 2007), face coverage
+ratio (cascade detector, non-CNN), skin-tone proportion, geometric and
+texture cues — and passes them to a Random Forest trained on the CineScale
+benchmark. The entire pipeline runs on CPU with no deep-learning
+dependency. For a higher-accuracy optional path, see \code{\link[=vlm_scale]{vlm_scale()}}.
 }
 \details{
 \subsection{Shot Scale Categories}{
@@ -42,13 +37,16 @@ The classifier assigns one of three broad shot scale categories:\tabular{ll}{
    Long \tab Full body or landscape (LS, ELS) \cr
 }
 
-
-The CNN method predicts seven fine-grained CineScale categories (ECU, CU,
-MCU, MS, MLS, LS, ELS) and maps them to these three groups. The heuristic
-fallback computes a composite score and maps to the same three groups.
 }
 }
 \references{
+Canini, L., Benini, S., & Leonardi, R. (2013). Classifying cinematographic
+shot types. \emph{Multimedia Tools and Applications}, 62(1), 51-73.
+\doi{10.1007/s11042-011-0916-9}
+
+Hou, X., & Zhang, L. (2007). Saliency detection: A spectral residual
+approach. \emph{CVPR 2007}.
+
 Savardi, M., Kovacs, A.B., Signoroni, A., & Benini, S. (2021). CineScale:
 A dataset of cinematic shot scale in movies. \emph{Data in Brief}, 36, 107002.
 \doi{10.1016/j.dib.2021.107002}

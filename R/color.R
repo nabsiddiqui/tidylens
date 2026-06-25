@@ -695,6 +695,3 @@ extract_color_moments <- function(tl_images, downsample = 200, color_space = "rg
   
   tl_images
 }
-
-# Null-coalescing operator
-`%||%` <- function(x, y) if (is.null(x)) y else x

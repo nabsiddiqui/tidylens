@@ -258,7 +258,7 @@ Tinylens addresses these barriers by providing:
 - Pure R implementation for core features
 - Tidy data output (one row per image)
 - Pipeable functions that chain naturally
-- Optional integrations (face detection, neural embeddings, local LLMs)
+- Optional integrations (face detection, neural embeddings, local VLMs)
 
 # Key Features
 
@@ -267,7 +267,7 @@ Tinylens addresses these barriers by providing:
 - **Video processing**: Frame extraction, shot detection, ASL computation
 - **Film metrics**: Shot scale classification (ECU to EWS), camera angle detection
 - **Audio analysis**: RMS loudness, spectral features aligned to video
-- **LLM integration**: Local vision models via Ollama for descriptions and classification
+- **VLM integration**: Local vision models via Ollama for descriptions and classification
 
 # Example Usage
 
@@ -360,7 +360,7 @@ Your package shows clear scholarly contribution through:
 - Domain expertise (film studies, digital humanities)
 - Thoughtful design (tidy principles, modular functions)
 - Academic grounding (Salt, Hasler & Süsstrunk references)
-- Original integration (local LLMs for film analysis)
+- Original integration (local VLMs for film analysis)
 
 ---
 

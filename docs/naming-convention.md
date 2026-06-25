@@ -69,21 +69,22 @@ film_summarize_scales()    # was: summarize_shot_scales
 film_classify_scale()      # was: get_shot_style
 ```
 
-### 5. LLM Functions: `llm_*`
-All LLM-related functions (already consistent):
+### 5. VLM Functions: `vlm_*`
+All VLM-related functions (vision-language model, via Ollama):
 
 ```r
-llm_describe()
-llm_classify()
-llm_sentiment()
-llm_recognize()
+vlm_describe()
+vlm_classify()
+vlm_sentiment()
+vlm_recognize()
+vlm_scale()
 
 # Setup helpers
-llm_check_ollama()         # was: check_ollama
-llm_list_models()          # was: list_vision_models
-llm_pull_model()           # was: pull_vision_model
-llm_check_dependencies()   # was: check_llm_dependencies
-llm_setup_instructions()
+vlm_check_ollama()         # was: check_ollama
+vlm_list_models()          # was: list_vision_models
+vlm_pull_model()           # was: pull_vision_model
+vlm_check_dependencies()   # was: check_llm_dependencies
+vlm_setup_instructions()
 ```
 
 ### 6. Core I/O: `load_*` / `is_*`
@@ -114,10 +115,14 @@ is_tl_images()
 | `compute_shot_rhythm` | `film_compute_rhythm` | film_ prefix |
 | `summarize_shot_scales` | `film_summarize_scales` | film_ prefix |
 | `get_shot_style` | `film_classify_scale` | film_ prefix, verb |
-| `check_ollama` | `llm_check_ollama` | llm_ prefix |
-| `list_vision_models` | `llm_list_models` | llm_ prefix |
-| `pull_vision_model` | `llm_pull_model` | llm_ prefix |
-| `check_llm_dependencies` | `llm_check_dependencies` | llm_ prefix |
+| `check_ollama` | `vlm_check_ollama` | vlm_ prefix |
+| `list_vision_models` | `vlm_list_models` | vlm_ prefix |
+| `pull_vision_model` | `vlm_pull_model` | vlm_ prefix |
+| `check_llm_dependencies` | `vlm_check_dependencies` | vlm_ prefix |
+| `llm_describe` (v1.x) | `vlm_describe` | LLM → VLM rename |
+| `llm_classify` (v1.x) | `vlm_classify` | LLM → VLM rename |
+| `llm_sentiment` (v1.x) | `vlm_sentiment` | LLM → VLM rename |
+| `llm_recognize` (v1.x) | `vlm_recognize` | LLM → VLM rename |
 
 ---
 

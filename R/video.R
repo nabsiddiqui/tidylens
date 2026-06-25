@@ -481,7 +481,7 @@ detect_shot_changes <- function(images,
 #'   - `shot_scale`: Broad shot scale group: Close, Medium, or Long
 #'     (if include_style = TRUE).
 #'
-#'   - `shot_scale_confidence`: CNN confidence or heuristic closeness score.
+#'   - `shot_scale_confidence`: Random Forest class probability for the predicted shot scale.
 #'
 #'   - `frame_path`: Path to representative frame image.
 #'
@@ -564,7 +564,7 @@ video_extract_shots <- function(video_path,
 
   # Classify shot styles if requested
   if (include_style) {
-    shot_frames <- film_classify_scale(shot_frames, method = "auto")
+    shot_frames <- film_classify_scale(shot_frames)
     shots$shot_scale <- shot_frames$shot_scale
     shots$shot_scale_confidence <- shot_frames$shot_scale_confidence
   }
@@ -629,13 +629,16 @@ video_extract_shot_frames <- function(images, shots, position = "middle") {
   result
 }
 
-#' Classify shot style/scale
+#' Classify shot scale
 #'
-#' Classify shots based on visual features to determine the cinematographic
-#' shot scale. When the `torch` and `torchvision` packages are available, a
-#' pre-trained ResNet-18 feature extractor with a linear classifier is used
-#' (trained on the CineScale dataset; ~85\% 3-class accuracy on CPU). Otherwise
-#' a lightweight multi-feature heuristic is used as a fallback.
+#' Classify the cinematographic shot scale of each image using a classical
+#' Random Forest trained on engineered features. The classifier follows
+#' Canini, Benini & Leonardi (2011): it extracts interpretable, formula-based
+#' features — spectral residual saliency (Hou & Zhang, 2007), face coverage
+#' ratio (cascade detector, non-CNN), skin-tone proportion, geometric and
+#' texture cues — and passes them to a Random Forest trained on the CineScale
+#' benchmark. The entire pipeline runs on CPU with no deep-learning
+#' dependency. For a higher-accuracy optional path, see [vlm_scale()].
 #'
 #' ## Shot Scale Categories
 #'
@@ -647,236 +650,65 @@ video_extract_shot_frames <- function(images, shots, position = "middle") {
 #' | Medium | Waist to knees (MS, MLS) |
 #' | Long | Full body or landscape (LS, ELS) |
 #'
-#' The CNN method predicts seven fine-grained CineScale categories (ECU, CU,
-#' MCU, MS, MLS, LS, ELS) and maps them to these three groups. The heuristic
-#' fallback computes a composite score and maps to the same three groups.
-#'
 #' @param tl_images A tl_images tibble.
-#' @param method Detection method: `"cnn"` (ResNet-18, requires torch +
-#'   torchvision), `"multi_feature"` (lightweight heuristic), `"salience"`
-#'   (alias for multi_feature), or `"auto"` (CNN if torch available, else
-#'   multi_feature). Default `"auto"`.
-#' @param downsample Maximum side length for analysis. Default 400 (heuristic)
-#'   or 224 (CNN).
 #'
 #' @return The input tibble with added columns:
 #'   - `shot_scale`: Broad shot scale group: Close, Medium, or Long.
 #'
-#'   - `shot_scale_confidence`: CNN confidence for the predicted class
-#'     (CNN method) or composite closeness score 0-1 (heuristic method).
+#'   - `shot_scale_confidence`: Random Forest class probability for the
+#'     predicted class (a value between 0 and 1).
 #'
 #' @references
+#' Canini, L., Benini, S., & Leonardi, R. (2013). Classifying cinematographic
+#' shot types. *Multimedia Tools and Applications*, 62(1), 51-73.
+#' \doi{10.1007/s11042-011-0916-9}
+#'
+#' Hou, X., & Zhang, L. (2007). Saliency detection: A spectral residual
+#' approach. *CVPR 2007*.
+#'
 #' Savardi, M., Kovacs, A.B., Signoroni, A., & Benini, S. (2021). CineScale:
 #' A dataset of cinematic shot scale in movies. *Data in Brief*, 36, 107002.
 #' \doi{10.1016/j.dib.2021.107002}
 #'
 #' @family film_metrics
 #' @export
-film_classify_scale <- function(tl_images, method = "auto", downsample = 400) {
+film_classify_scale <- function(tl_images) {
   validate_tl_images(tl_images)
 
-  has_torch <- requireNamespace("torch", quietly = TRUE) &&
-               requireNamespace("torchvision", quietly = TRUE)
-
-  use_method <- method
-  if (use_method == "auto") {
-    use_method <- if (has_torch) "cnn" else "multi_feature"
+  if (!requireNamespace("ranger", quietly = TRUE)) {
+    cli::cli_abort("Package {.pkg ranger} is required for shot scale classification. Install with: install.packages('ranger')")
   }
-  if (use_method == "salience") use_method <- "multi_feature"
 
-  if (use_method == "cnn" && !has_torch) {
-    cli::cli_warn(
-      c("torch/torchvision not available, falling back to heuristic method.",
-        "i" = "Install with: install.packages(c('torch', 'torchvision'))")
+  model_path <- system.file("models", "shot_scale_classical.rds",
+                            package = "tidylens")
+  if (!nzchar(model_path)) {
+    cli::cli_abort(
+      "Shot scale model not found in package installation.",
+      "i" = "Reinstall the package or run tools/train_shot_scale_classical.R"
     )
-    use_method <- "multi_feature"
   }
-
-  if (use_method == "cnn") {
-    return(.classify_scale_cnn(tl_images))
-  }
-
-  # --- Heuristic fallback ---
-  .classify_scale_heuristic(tl_images, downsample = downsample)
-}
-
-# ---- CNN-based classification (ResNet-18 + linear classifier) ----
-
-.classify_scale_cnn <- function(tl_images) {
-  weights_path <- system.file("models", "shot_scale_weights.rds",
-                              package = "tidylens")
-  if (!nzchar(weights_path)) {
-    cli::cli_abort("Shot scale model weights not found in package installation.")
-  }
-  wt <- readRDS(weights_path)
-
-  model <- torchvision::model_resnet18(pretrained = TRUE)
-  model$eval()
-  feature_extractor <- torch::nn_sequential(
-    model$conv1, model$bn1, model$relu, model$maxpool,
-    model$layer1, model$layer2, model$layer3, model$layer4,
-    model$avgpool
-  )
-  feature_extractor$eval()
-
-  W <- torch::torch_tensor(wt$W)
-  b <- torch::torch_tensor(wt$b)
-  classes <- wt$classes
-  im_mean <- wt$imagenet_mean
-  im_sd <- wt$imagenet_sd
-  input_size <- wt$input_size
-
-  class3_map <- wt$class3_map
+  bundle <- readRDS(model_path)
 
   results <- map_images(tl_images, function(img) {
     tryCatch({
-      resized <- magick::image_resize(img,
-        paste0(input_size, "x", input_size, "!"))
-      arr <- as.integer(magick::image_data(resized))
-      tensor <- torch::torch_zeros(1, 3, input_size, input_size)
-      for (ch in 1:3) {
-        channel <- t(arr[,,ch]) / 255.0
-        tensor[1, ch, , ] <- (torch::torch_tensor(channel) - im_mean[ch]) / im_sd[ch]
-      }
-      torch::with_no_grad({
-        feats <- feature_extractor(tensor)$view(c(1, -1))
-        logits <- torch::torch_mm(feats, torch::torch_t(W)) +
-                  b$unsqueeze(1)
-        probs <- torch::nnf_softmax(logits, dim = 2)
-        pred_idx <- as.integer(logits$argmax(dim = 2))
-        confidence <- as.numeric(probs[1, pred_idx])
-      })
-      label <- classes[pred_idx]
+      info <- magick::image_info(img)
+      feats <- extract_shot_scale_features(img, info)
+      feats_df <- as.data.frame(as.list(feats))
+      probs <- predict(bundle$model, feats_df)$predictions
+      pred_idx <- max.col(probs)
       list(
-        shot_scale = unname(class3_map[label]),
-        shot_scale_confidence = confidence
+        shot_scale = colnames(probs)[pred_idx],
+        shot_scale_confidence = as.numeric(probs[1, pred_idx])
       )
     }, error = function(e) {
       list(shot_scale = NA_character_,
            shot_scale_confidence = NA_real_)
     })
-  }, msg = "Classifying shot scales (CNN)")
+  }, downsample = 400, msg = "Classifying shot scales")
 
   tl_images$shot_scale <- purrr::map_chr(results,
     ~ .x$shot_scale %||% NA_character_)
   tl_images$shot_scale_confidence <- purrr::map_dbl(results,
     ~ .x$shot_scale_confidence %||% NA_real_)
   tl_images
-}
-
-# ---- Heuristic fallback ----
-
-.classify_scale_heuristic <- function(tl_images, downsample = 400) {
-  has_face_detection <- requireNamespace("image.libfacedetection", quietly = TRUE)
-
-  classify_score <- function(score) {
-    if (is.na(score)) return(list(scale = NA_character_, name = NA_character_, group = NA_character_))
-    if      (score > 0.78) list(scale = "ECU", name = "Extreme Close-Up",   group = "Close")
-    else if (score > 0.65) list(scale = "CU",  name = "Close-Up",           group = "Close")
-    else if (score > 0.52) list(scale = "MCU", name = "Medium Close-Up",    group = "Close")
-    else if (score > 0.40) list(scale = "MS",  name = "Medium Shot",        group = "Medium")
-    else if (score > 0.30) list(scale = "CS",  name = "Cowboy Shot",        group = "Medium")
-    else if (score > 0.22) list(scale = "MFS", name = "Medium Full Shot",   group = "Medium")
-    else if (score > 0.14) list(scale = "FS",  name = "Full Shot",          group = "Long")
-    else if (score > 0.07) list(scale = "WS",  name = "Wide Shot",          group = "Long")
-    else                   list(scale = "EWS", name = "Extreme Wide Shot",  group = "Long")
-  }
-
-  results <- map_images(tl_images, function(img) {
-    info <- magick::image_info(img)
-    w <- info$width; h <- info$height; frame_area <- w * h
-
-    face_coverage <- NA_real_
-    if (has_face_detection) {
-      tryCatch({
-        gray_img <- magick::image_convert(img, colorspace = "gray")
-        gray_data <- as.integer(magick::image_data(gray_img))
-        gray_mat <- if (length(dim(gray_data)) == 3) gray_data[,,1] else gray_data
-        faces <- image.libfacedetection::image_detect_faces(gray_mat)
-        if (nrow(faces) > 0) face_coverage <- max(faces$width * faces$height) / frame_area
-      }, error = function(e) NULL)
-    }
-
-    gray_img <- magick::image_convert(img, colorspace = "gray")
-    gray_data <- as.integer(magick::image_data(gray_img))
-    mat <- if (length(dim(gray_data)) == 3) gray_data[,,1] / 255.0 else gray_data / 255.0
-    nr <- nrow(mat); nc <- ncol(mat)
-    if (nr < 10 || nc < 10) {
-      return(list(shot_scale = NA_character_,
-                  shot_scale_confidence = NA_real_))
-    }
-
-    lap <- mat[2:(nr-1), 2:(nc-1)] * (-4) +
-           mat[1:(nr-2), 2:(nc-1)] + mat[3:nr, 2:(nc-1)] +
-           mat[2:(nr-1), 1:(nc-2)] + mat[2:(nr-1), 3:nc]
-    lap_var <- stats::var(as.vector(lap))
-
-    gx <- abs(mat[, -1, drop = FALSE] - mat[, -nc, drop = FALSE])
-    gy <- abs(mat[-1, , drop = FALSE] - mat[-nr, , drop = FALSE])
-    min_r <- min(nrow(gx), nrow(gy)); min_c <- min(ncol(gx), ncol(gy))
-    edge_mag <- gx[seq_len(min_r), seq_len(min_c)] + gy[seq_len(min_r), seq_len(min_c)]
-    cr1 <- max(1L, round(min_r * 0.25)); cr2 <- min(min_r, round(min_r * 0.75))
-    cc1 <- max(1L, round(min_c * 0.25)); cc2 <- min(min_c, round(min_c * 0.75))
-    center_energy <- mean(edge_mag[cr1:cr2, cc1:cc2])
-    n_periph <- length(edge_mag) - length(edge_mag[cr1:cr2, cc1:cc2])
-    periph_energy <- if (n_periph > 0) (sum(edge_mag) - sum(edge_mag[cr1:cr2, cc1:cc2])) / n_periph else center_energy
-    center_ratio <- if (periph_energy > 1e-8) center_energy / periph_energy else 1.0
-
-    block_size <- max(4L, min(nr, nc) %/% 8L)
-    n_br <- nr %/% block_size; n_bc <- nc %/% block_size
-    if (n_br > 0 && n_bc > 0) {
-      block_vars <- numeric(n_br * n_bc); k <- 1L
-      for (bi in seq_len(n_br)) for (bj in seq_len(n_bc)) {
-        ri <- ((bi-1L)*block_size+1L):(bi*block_size)
-        ci <- ((bj-1L)*block_size+1L):(bj*block_size)
-        block_vars[k] <- stats::var(as.vector(mat[ri, ci])); k <- k + 1L
-      }
-      spatial_detail <- mean(block_vars, na.rm = TRUE)
-      bv_mean <- mean(block_vars, na.rm = TRUE)
-      spatial_cv <- if (bv_mean > 1e-8) stats::sd(block_vars, na.rm = TRUE) / bv_mean else 1.0
-    } else { spatial_detail <- stats::var(as.vector(mat)); spatial_cv <- 1.0 }
-
-    edge_threshold_val <- mean(edge_mag) + stats::sd(edge_mag)
-    edge_density <- sum(edge_mag > edge_threshold_val) / length(edge_mag)
-
-    rgb_data <- as.integer(magick::image_data(img))
-    r_vals <- as.vector(rgb_data[,,1]) / 255.0
-    g_vals <- as.vector(rgb_data[,,2]) / 255.0
-    b_vals <- as.vector(rgb_data[,,3]) / 255.0
-    r_hist <- tabulate(as.integer(r_vals * 15) + 1L, nbins = 16L)
-    g_hist <- tabulate(as.integer(g_vals * 15) + 1L, nbins = 16L)
-    b_hist <- tabulate(as.integer(b_vals * 15) + 1L, nbins = 16L)
-    combined <- c(r_hist, g_hist, b_hist)
-    p <- combined / sum(combined); p <- p[p > 0]
-    color_entropy <- -sum(p * log2(p))
-
-    f_lap        <- min(1, lap_var / 0.005)
-    f_center     <- min(1, max(0, (center_ratio - 0.7) / 1.0))
-    f_detail     <- min(1, spatial_detail / 0.008)
-    f_uniformity <- max(0, 1 - min(1, spatial_cv / 2.0))
-    f_edge       <- min(1, edge_density / 0.20)
-    f_color_close <- max(0, 1 - min(1, max(0, color_entropy - 2.5) / 3.0))
-
-    if (!is.na(face_coverage) && face_coverage > 0.005) {
-      f_face <- min(1, face_coverage * 4.0)
-      composite <- 0.35*f_face + 0.15*f_lap + 0.15*f_center +
-                   0.10*f_detail + 0.10*f_uniformity + 0.05*f_edge + 0.10*f_color_close
-    } else {
-      composite <- 0.25*f_lap + 0.20*f_center + 0.20*f_detail +
-                   0.10*f_uniformity + 0.10*f_edge + 0.15*f_color_close
-    }
-    composite <- max(0, min(1, composite))
-    cl <- classify_score(composite)
-    list(shot_scale = cl$group,
-         shot_scale_confidence = composite)
-  }, downsample = downsample, msg = "Classifying shot scales")
-
-  tl_images$shot_scale <- purrr::map_chr(results, ~ .x$shot_scale %||% NA_character_)
-  tl_images$shot_scale_confidence <- purrr::map_dbl(results, ~ .x$shot_scale_confidence %||% NA_real_)
-  tl_images
-}
-
-# Null-coalescing operator (if not already defined)
-if (!exists("%||%")) {
-  `%||%` <- function(x, y) if (is.null(x)) y else x
 }

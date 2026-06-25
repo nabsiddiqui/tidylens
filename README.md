@@ -119,7 +119,7 @@ shots <- video_extract_shots("movie.mp4", threshold = 0.4)
 
 ### Shot Scale Classification
 
-Tidylens classifies each shot into **3 broad scale categories** (Close, Medium, Long) using a ResNet-18 CNN that runs entirely on CPU (no GPU required). Validated against the [CineScale dataset](https://doi.org/10.1016/j.dib.2021.106934) across 8 films and 6 directors: **76% 3-class accuracy** on 4,394 frames.
+Tidylens classifies each shot into **3 broad scale categories** (Close, Medium, Long) using a classical Random Forest trained on engineered features (spectral residual saliency, face coverage, skin tone, geometric and texture features) following Canini et al. (2011) and Hou & Zhang (2007). Validated against the [CineScale dataset](https://doi.org/10.1016/j.dib.2021.106934) across 8 films and 6 directors: **~70-75% 3-class accuracy** on 4,394 frames. Runs entirely on CPU (no GPU required). For higher accuracy, see `vlm_scale()` for a VLM-based path via Ollama.
 
 | Group | What's in Frame |
 |-------|-----------------|
@@ -128,12 +128,13 @@ Tidylens classifies each shot into **3 broad scale categories** (Close, Medium, 
 | Long | Full body or landscape (LS, ELS) |
 
 ```r
-# CNN method (default when torch installed)
+# Classical Random Forest (default)
 shots <- video_extract_shots("movie.mp4")
 # Returns: shot_scale (Close/Medium/Long), shot_scale_confidence
 
-# Works without torch too (heuristic fallback)
-shots <- video_extract_shots("movie.mp4")  # auto-detects available method
+# VLM-based path (optional, via Ollama) for higher accuracy
+images <- vlm_scale(images)
+# Adds: shot_scale, shot_scale_confidence
 ```
 
 ---
@@ -190,7 +191,7 @@ images <- detect_faces(images)        # face_count, face_areas (requires package
 
 ---
 
-## LLM Vision (Ollama)
+## VLM Vision (Ollama)
 
 ```bash
 # Setup
@@ -199,12 +200,12 @@ ollama pull qwen2.5vl:7b
 ```
 
 ```r
-llm_check_dependencies()
+vlm_check_dependencies()
 
-images <- llm_describe(images)    # Natural language descriptions
-images <- llm_classify(images, categories = c("indoor", "outdoor"))
-images <- llm_sentiment(images)   # Mood analysis
-images <- llm_recognize(images)   # Object recognition
+images <- vlm_describe(images)    # Natural language descriptions
+images <- vlm_classify(images, categories = c("indoor", "outdoor"))
+images <- vlm_sentiment(images)   # Mood analysis
+images <- vlm_recognize(images)   # Object recognition
 ```
 
 ---
@@ -248,7 +249,7 @@ write.csv(shots, "shot_data.csv")
 `video_get_info()`, `video_extract_frames()`, `video_sample_frames()`, `video_extract_shots()`, `video_extract_shot_frames()`
 
 ### Film (`film_*`)
-`film_classify_scale()` (per-image shot scale classification)
+`film_classify_scale()` (per-image shot scale classification, classical Random Forest)
 
 ### Color (`extract_*`)
 `extract_brightness()`, `extract_color_mean()`, `extract_color_median()`, `extract_color_mode()`, `extract_saturation()`, `extract_colourfulness()`, `extract_warmth()`, `extract_dominant_color()`, `extract_color_variance()`, `extract_color_moments()`, `extract_hue_histogram()`
@@ -265,8 +266,8 @@ write.csv(shots, "shot_data.csv")
 ### Embeddings
 `extract_embeddings()`, `extract_color_histogram()`
 
-### LLM Vision
-`llm_describe()`, `llm_classify()`, `llm_sentiment()`, `llm_recognize()`, `llm_check_ollama()`, `llm_list_models()`, `llm_pull_model()`, `llm_check_dependencies()`
+### VLM Vision
+`vlm_describe()`, `vlm_classify()`, `vlm_sentiment()`, `vlm_recognize()`, `vlm_scale()`, `vlm_check_ollama()`, `vlm_list_models()`, `vlm_pull_model()`, `vlm_check_dependencies()`
 
 ---
 

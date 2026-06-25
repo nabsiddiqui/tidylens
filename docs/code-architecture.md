@@ -22,7 +22,7 @@ A comprehensive guide to understanding how tinylens works internally.
 2. **Scalar columns**: Feature extraction produces scalar columns (not nested lists)
 3. **R-first**: No Python dependencies for core functionality
 4. **Composability**: Small focused functions that chain with pipes
-5. **Local-only LLM**: All LLM functions use Ollama (no cloud providers)
+5. **Local-only VLM**: All VLM functions use Ollama (no cloud providers)
 
 ### Design Philosophy
 
@@ -84,7 +84,7 @@ Functions follow a consistent prefix-based naming:
 | `film_*` | Film/editing analysis | `film_compute_asl()` |
 | `extract_*` | Feature extraction | `extract_brightness()` |
 | `detect_*` | Object/feature detection | `detect_faces()` |
-| `llm_*` | LLM-based analysis | `llm_describe()` |
+| `vlm_*` | VLM-based analysis | `vlm_describe()` |
 
 ### File Organization
 
@@ -99,8 +99,9 @@ R/
 ├── detection.R        # Face and skin tone detection
 ├── embeddings.R       # Neural embeddings (requires torch)
 ├── audio.R            # Audio feature extraction
-├── llm.R              # Vision LLM functions
-└── llm_setup.R        # Ollama setup helpers
+├── vlm.R              # Vision VLM functions
+├── vlm_setup.R        # Ollama setup helpers
+└── shot_scale_features.R  # Classical RF features for shot scale classification
 ```
 
 ### Complete Function Reference
@@ -123,7 +124,7 @@ R/
 - `film_summarize_scales(shots)` - Shot scale distribution summary
 
 #### Film Metrics (Per-Image)
-- `film_classify_scale(tl_images, method, downsample)` - Classify shot scale (ECU, CU, MCU, etc.)
+- `film_classify_scale(tl_images, downsample)` - Classify shot scale (Close, Medium, Long) via classical Random Forest
 - `film_classify_angle(tl_images, method, downsample)` - Classify camera angle
 
 #### Color Extraction
@@ -153,18 +154,19 @@ R/
 - `extract_embeddings(tl_images, model, layer, downsample)` - ResNet embeddings
 - `compute_embedding_similarity(embeddings1, embeddings2)` - Cosine similarity
 
-#### LLM Vision
-- `llm_describe(tl_images, model, prompt, base_url, downsample)` - Image descriptions
-- `llm_classify(tl_images, categories, model, base_url, downsample)` - Category classification
-- `llm_sentiment(tl_images, model, base_url, downsample)` - Mood/sentiment analysis
-- `llm_recognize(tl_images, model, base_url, downsample)` - Object recognition
+#### VLM Vision
+- `vlm_describe(tl_images, model, prompt, base_url, downsample)` - Image descriptions
+- `vlm_classify(tl_images, categories, model, base_url, downsample)` - Category classification
+- `vlm_sentiment(tl_images, model, base_url, downsample)` - Mood/sentiment analysis
+- `vlm_recognize(tl_images, model, base_url, downsample)` - Object recognition
+- `vlm_scale(tl_images, model, base_url, downsample)` - VLM-based shot scale classification
 
-#### LLM Setup
-- `llm_check_ollama(base_url)` - Check if Ollama is running
-- `llm_list_models(base_url)` - List available models
-- `llm_pull_model(model, base_url)` - Pull/download a model
-- `llm_test_vision(model, test_image, base_url)` - Test vision capabilities
-- `llm_get_recommended_models()` - Get recommended vision models
+#### VLM Setup
+- `vlm_check_ollama(base_url)` - Check if Ollama is running
+- `vlm_list_models(base_url)` - List available models
+- `vlm_pull_model(model, base_url)` - Pull/download a model
+- `vlm_test_vision(model, test_image, base_url)` - Test vision capabilities
+- `vlm_get_recommended_models()` - Get recommended vision models
 
 #### Audio
 - `extract_audio_features(tl_images, video_source)` - Full audio analysis
@@ -270,17 +272,17 @@ rhythm <- film_compute_rhythm(shots)
 scales <- film_summarize_scales(shots)
 ```
 
-### LLM Pipeline
+### VLM Pipeline
 
 ```r
 # Ensure Ollama is running
-llm_check_ollama()
+vlm_check_ollama()
 
 # Visual analysis
 images <- load_images("images/") |>
-  llm_describe() |>
-  llm_classify(categories = c("indoor", "outdoor", "portrait")) |>
-  llm_sentiment()
+  vlm_describe() |>
+  vlm_classify(categories = c("indoor", "outdoor", "portrait")) |>
+  vlm_sentiment()
 ```
 
 ---
@@ -347,30 +349,15 @@ rhythm_entropy <- entropy_raw / max_entropy
 
 ### Shot Scale Classification
 
-Uses face detection or gradient salience to estimate subject size:
+Uses a classical Random Forest trained on engineered features (spectral residual saliency following Hou & Zhang 2007, face coverage, skin tone, and geometric/texture features following Canini et al. 2011). The `method` parameter has been removed; `film_classify_scale()` now runs a single RF model (`shot_scale_classical.rds`) on CPU. The CNN (ResNet-18) path and its weight files have been removed. For a VLM-based high-accuracy path, use `vlm_scale()` via Ollama. Accuracy is ~70-75% (was 76% with the CNN):
 
 ```r
-# Get subject coverage (0-1 proportion of frame)
-if (method == "face") {
-  # Use face bounding box size
-  coverage <- face_area / frame_area
-} else {
-  # Use gradient-based salience (high gradients = subject)
-  coverage <- high_gradient_area / total_area
-}
+# Extract engineered features per frame (spectral residual saliency,
+# face coverage, skin tone, geometric and texture descriptors)
+features <- shot_scale_extract_features(img)
 
-# Map coverage to scale
-scale <- case_when(
-  coverage > 0.70 ~ "ECU",  # Extreme Close-Up
-  coverage > 0.45 ~ "CU",   # Close-Up
-  coverage > 0.30 ~ "MCU",  # Medium Close-Up
-  coverage > 0.20 ~ "MS",   # Medium Shot
-  coverage > 0.15 ~ "CS",   # Cowboy Shot
-  coverage > 0.10 ~ "MFS",  # Medium Full Shot
-  coverage > 0.06 ~ "FS",   # Full Shot
-  coverage > 0.02 ~ "WS",   # Wide Shot
-  TRUE ~ "EWS"              # Extreme Wide Shot
-)
+# Predict with the classical Random Forest
+scale <- predict(rf_model, features)  # Close, Medium, or Long
 ```
 
 ---
@@ -386,9 +373,9 @@ scale <- case_when(
 ### Optional (Suggests)
 - `av` - Video processing (ffmpeg wrapper)
 - `tuneR` - Audio analysis
-- `torch`, `torchvision` - Neural embeddings
+- `torch`, `torchvision` - Neural embeddings (only used by `extract_embeddings()`)
 - `image.libfacedetection` - Face detection
-- `httr2`, `base64enc`, `jsonlite` - LLM functions (Ollama API)
+- `httr2`, `base64enc`, `jsonlite` - VLM functions (Ollama API)
 
 ### Installing Optional Dependencies
 
@@ -400,12 +387,12 @@ install.packages("av")
 install.packages("image.libfacedetection", 
                  repos = "https://bnosac.r-universe.dev")
 
-# Neural embeddings
+# Neural embeddings (only used by extract_embeddings(); not for shot scale)
 install.packages("torch")
 torch::install_torch()
 install.packages("torchvision")
 
-# LLM support (packages + Ollama)
+# VLM support (packages + Ollama)
 install.packages(c("httr2", "base64enc", "jsonlite"))
 # Then install Ollama from https://ollama.ai
 ```

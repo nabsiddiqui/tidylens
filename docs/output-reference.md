@@ -14,7 +14,7 @@ A complete guide to all columns and metrics produced by Tinylens functions.
 - [Detection Features](#detection-features)
 - [Audio Features](#audio-features)
 - [Embedding Features](#embedding-features)
-- [LLM Features](#llm-features)
+- [VLM Features](#vlm-features)
 - [Film Metrics (Aggregate)](#film-metrics-aggregate)
 
 ---
@@ -84,11 +84,11 @@ Columns added by `film_classify_scale()` or `video_extract_shots()`:
 | Column | Type | Description |
 |--------|------|-------------|
 | `shot_scale` | character | Broad group: Close, Medium, or Long |
-| `shot_scale_confidence` | numeric | CNN confidence or heuristic closeness score (0-1) |
+| `shot_scale_confidence` | numeric | Random Forest probability or heuristic closeness score (0-1) |
 
 ### Shot Scale Groups
 
-The CNN method classifies into 7 CineScale categories and maps them to 3 broad groups:
+The classical Random Forest method returns the same three broad groups, trained on engineered features (spectral residual saliency, face coverage, skin tone, geometric and texture features) following Canini et al. (2011) and Hou & Zhang (2007):
 
 | Group | CineScale Codes | What's in Frame |
 |-------|----------------|-----------------|
@@ -96,7 +96,7 @@ The CNN method classifies into 7 CineScale categories and maps them to 3 broad g
 | **Medium** | MS, MLS | Waist to knees |
 | **Long** | LS, ELS | Full body or landscape |
 
-The heuristic fallback uses coverage-based codes (CS, MFS, FS, WS, EWS) mapped to the same three groups.
+For a VLM-based high-accuracy path, use `vlm_scale()` (adds the same `shot_scale` and `shot_scale_confidence` columns via Ollama).
 
 ---
 
@@ -262,28 +262,37 @@ The heuristic fallback uses coverage-based codes (CS, MFS, FS, WS, EWS) mapped t
 
 ---
 
-## LLM Features
+## VLM Features
 
-### `llm_describe()`
+### `vlm_describe()`
 | Column | Type | Description |
 |--------|------|-------------|
-| `llm_description` | character | Natural language description of image content |
+| `vlm_description` | character | Natural language description of image content |
 
-### `llm_classify()`
+### `vlm_classify()`
 | Column | Type | Description |
 |--------|------|-------------|
-| `llm_category` | character | Assigned category from provided options |
+| `vlm_category` | character | Assigned category from provided options |
 
-### `llm_sentiment()`
+### `vlm_sentiment()`
 | Column | Type | Description |
 |--------|------|-------------|
-| `llm_mood` | character | Detected mood (e.g., "tense", "peaceful", "exciting") |
-| `llm_sentiment` | character | Overall sentiment (positive/negative/neutral) |
+| `vlm_mood` | character | Detected mood (e.g., "tense", "peaceful", "exciting") |
+| `vlm_mood_valence` | character | Overall sentiment (positive/negative/neutral) |
+| `vlm_mood_intensity` | numeric | Intensity of the mood (0-1) |
 
-### `llm_recognize()`
+### `vlm_recognize()`
 | Column | Type | Description |
 |--------|------|-------------|
-| `llm_objects` | character | List of recognized objects in image |
+| `vlm_objects` | character | List of recognized objects in image |
+| `vlm_people_count` | integer | Number of people detected |
+| `vlm_text_detected` | character | Text detected in the image |
+
+### `vlm_scale()`
+| Column | Type | Description |
+|--------|------|-------------|
+| `shot_scale` | character | Broad group: Close, Medium, or Long (VLM-based) |
+| `shot_scale_confidence` | numeric | Model confidence score (0-1) |
 
 ---
 
@@ -323,7 +332,7 @@ These functions return **summary tibbles**, not per-image columns.
 
 ---
 
-## Recommended LLM Models
+## Recommended VLM Models
 
 For image captioning with Ollama, we recommend:
 
