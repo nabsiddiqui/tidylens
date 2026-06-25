@@ -144,6 +144,11 @@ feature_mat <- do.call(rbind, lapply(all_features, function(f) {
   f
 }))
 colnames(feature_mat) <- names(all_features[[valid_idx]])
+# ponytail: cached features carry doubled names (face_coverage.face_coverage);
+# normalize to the clean names emitted by the current extract_shot_scale_features
+clean_names <- sub("\\..*$", "", colnames(feature_mat))
+clean_names <- make.unique(clean_names, sep = "_")
+colnames(feature_mat) <- clean_names
 feature_df <- as.data.frame(feature_mat)
 feature_df$class_3 <- annotations$class_3
 feature_df$film    <- annotations$film
@@ -176,12 +181,14 @@ rf_formula <- as.formula(paste("class_3 ~", paste(feature_cols, collapse = " + "
 rf_model <- ranger::ranger(
   formula = rf_formula,
   data = train_df,
-  num.trees = 1000,
-  min.node.size = 10,
+  num.trees = 150,
+  min.node.size = 80,
+  max.depth = 10,
   mtry = max(2L, floor(sqrt(length(feature_cols)))),
   classification = TRUE,
   probability = TRUE,
   importance = "impurity",
+  write.forest = TRUE,
   seed = SEED
 )
 
@@ -231,12 +238,15 @@ for (d in unique(test_df$director)) {
 # ---------------------------------------------------------------------------
 
 dir.create(dirname(WEIGHTS_OUT), showWarnings = FALSE, recursive = TRUE)
+# ponytail: strip in-memory OOB predictions to shrink the saved bundle (44MB -> <1MB)
+rf_model$predictions <- NULL
+rf_model$prediction.error <- NULL
 model_bundle <- list(
   model = rf_model,
   feature_names = feature_cols,
   classes = c("Close", "Medium", "Long")
 )
-saveRDS(model_bundle, WEIGHTS_OUT)
+saveRDS(model_bundle, WEIGHTS_OUT, compress = "xz")
 cat(sprintf("\nSaved model bundle to %s (%s KB)\n", WEIGHTS_OUT,
             file.size(WEIGHTS_OUT) %/% 1024))
 
