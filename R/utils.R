@@ -39,25 +39,6 @@ downsample_image <- function(img, max_side = 200) {
   magick::image_resize(img, paste0(new_width, "x", new_height))
 }
 
-#' Read and optionally downsample an image
-#'
-#' @param path Path to image file.
-#' @param downsample Maximum side length, or `NULL` for no downsampling.
-#'
-#' @return Magick image object.
-#'
-#' @keywords internal
-#' @noRd
-read_image <- function(path, downsample = NULL) {
-  img <- magick::image_read(path)
-
-  if (!is.null(downsample) && downsample > 0) {
-    img <- downsample_image(img, downsample)
-  }
-
-  img
-}
-
 #' Apply a function over images with progress
 #'
 #' @param tl_images A tl_images tibble.
@@ -81,7 +62,10 @@ map_images <- function(tl_images, fn, downsample = NULL, msg = "Processing image
     path <- tl_images$local_path[i]
 
     tryCatch({
-      img <- read_image(path, downsample = downsample)
+      img <- magick::image_read(path)
+      if (!is.null(downsample) && downsample > 0) {
+        img <- downsample_image(img, downsample)
+      }
       results[[i]] <- fn(img)
     }, error = function(e) {
       cli::cli_warn("Error processing {basename(path)}: {e$message}")
