@@ -97,7 +97,9 @@ film_compute_asl <- function(shots) {
 #' @param shots A tibble with shot data containing a `duration` column.
 #'
 #' @return A tibble with one row containing:
-#'   - `rhythm_entropy`: Randomness of shot lengths (0-1, higher = more chaotic).
+#'   - `rhythm_entropy`: Evenness of the shot-duration distribution (0-1,
+#'     higher = more uniform screen time across shots). Not a measure of
+#'     temporal ordering.
 #'
 #'   - `rhythm_regularity`: How consistent shot lengths are (0-1, higher = more regular).
 #'
@@ -112,7 +114,7 @@ film_compute_asl <- function(shots) {
 #' @details
 #' **Interpretation:**
 #' - High regularity + low entropy = Metronomic editing (music videos, TV shows).
-#' - Low regularity + high entropy = Chaotic editing (experimental, avant-garde).
+#' - Low regularity + high entropy = Uneven shot durations (experimental, avant-garde).
 #' - Positive acceleration = Building toward climax.
 #' - Negative acceleration = Winding down.
 #'

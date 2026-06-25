@@ -12,7 +12,9 @@ film_compute_rhythm(shots)
 \value{
 A tibble with one row containing:
 \itemize{
-\item \code{rhythm_entropy}: Randomness of shot lengths (0-1, higher = more chaotic).
+\item \code{rhythm_entropy}: Evenness of the shot-duration distribution (0-1,
+higher = more uniform screen time across shots). Not a measure of
+temporal ordering.
 \item \code{rhythm_regularity}: How consistent shot lengths are (0-1, higher = more regular).
 \item \code{rhythm_acceleration}: Is cutting speeding up (positive) or slowing (negative)?
 \item \code{rhythm_range_ratio}: Ratio of longest to shortest shot.
@@ -33,7 +35,7 @@ This tells you if the editor is building tension or keeping things calm.
 \strong{Interpretation:}
 \itemize{
 \item High regularity + low entropy = Metronomic editing (music videos, TV shows).
-\item Low regularity + high entropy = Chaotic editing (experimental, avant-garde).
+\item Low regularity + high entropy = Uneven shot durations (experimental, avant-garde).
 \item Positive acceleration = Building toward climax.
 \item Negative acceleration = Winding down.
 }

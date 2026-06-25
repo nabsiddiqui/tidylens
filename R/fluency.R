@@ -205,23 +205,23 @@ extract_visual_complexity <- function(tl_images, downsample = 200) {
     gray <- magick::image_convert(img, colorspace = "gray")
     data <- as.integer(magick::image_data(gray))
     
-    # Handle both HxW and HxWx1 cases
+    # Handle both HxW and HxWx1 cases; normalize to 0-1 for consistent scaling
     if (length(dim(data)) == 3) {
-      mat <- data[, , 1]
+      mat <- data[, , 1] / 255.0
     } else {
-      mat <- data
+      mat <- data / 255.0
     }
     
     nr <- nrow(mat)
     nc <- ncol(mat)
     
-    # 1. Entropy component
-    hist_counts <- tabulate(mat + 1, nbins = 256)
+    # 1. Entropy component (0-1)
+    hist_counts <- tabulate(as.integer(mat * 255) + 1L, nbins = 256L)
     probs <- hist_counts / sum(hist_counts)
     probs <- probs[probs > 0]
-    entropy <- -sum(probs * log2(probs)) / 8  # Normalize by max
+    entropy <- -sum(probs * log2(probs)) / 8  # Normalize by max (log2(256))
     
-    # 2. Edge density component
+    # 2. Edge density component (0-1)
     if (nr >= 3 && nc >= 3) {
       gx <- mat
       gx[, -1] <- mat[, -1] - mat[, -nc]
@@ -232,16 +232,15 @@ extract_visual_complexity <- function(tl_images, downsample = 200) {
       gy[1, ] <- 0
       
       grad_mag <- sqrt(as.numeric(gx)^2 + as.numeric(gy)^2)
-      edge_density <- mean(grad_mag > 25) # Threshold for edges
+      edge_density <- mean(grad_mag > 0.1)  # Threshold on 0-1 gradient
     } else {
       edge_density <- 0
     }
     
-    # 3. Color diversity (for color images)
-    # We'll use grayscale variance as proxy
-    intensity_var <- stats::sd(mat) / 128  # Normalize
+    # 3. Intensity variation (0-1)
+    intensity_var <- stats::sd(mat)
     
-    # Combined complexity
+    # Combined complexity (all three components on 0-1 scale)
     complexity <- (entropy + edge_density + min(intensity_var, 1)) / 3
     
     list(visual_complexity = complexity)

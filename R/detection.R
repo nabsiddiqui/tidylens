@@ -43,12 +43,9 @@ detect_faces <- function(tl_images, min_size = 20) {
     
     tryCatch({
       img <- magick::image_read(path)
-      
-      # Convert to raw
-      raw_data <- magick::image_data(img, channels = "rgb")
-      
-      # Detect faces
-      result <- image.libfacedetection::image_detect_faces(raw_data)
+
+      # Detect faces (image.libfacedetection accepts a magick image directly)
+      result <- image.libfacedetection::image_detect_faces(img)
       
       if (nrow(result$detections) > 0) {
         # Filter by minimum size
@@ -104,23 +101,8 @@ detect_skin_tones <- function(tl_images, downsample = 200) {
   validate_tl_images(tl_images)
   
   results <- map_images(tl_images, function(img) {
-    data <- as.integer(magick::image_data(img, channels = "rgb"))
-    # data is HxWxC after as.integer
-    r <- data[, , 1]
-    g <- data[, , 2]
-    b <- data[, , 3]
-    
-    # Simple skin tone detection in RGB space
-    # Based on: Skin detection using color pixel classification
-    # Skin pixels typically have: R > 95, G > 40, B > 20
-    # R > G, R > B, |R - G| > 15
-    skin_mask <- (r > 95) & (g > 40) & (b > 20) &
-                 (r > g) & (r > b) &
-                 (abs(as.integer(r) - as.integer(g)) > 15)
-    
-    skin_prop <- sum(skin_mask) / length(skin_mask)
-    
-    list(skin_tone_prop = skin_prop)
+    mask <- skin_mask(img)
+    list(skin_tone_prop = sum(mask) / length(mask))
   }, downsample = downsample, msg = "Detecting skin tones")
   
   bind_results(tl_images, results)

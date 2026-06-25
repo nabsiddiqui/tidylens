@@ -188,9 +188,10 @@ extract_colourfulness <- function(tl_images, downsample = 200) {
 #'
 #' @return The input tibble with added columns:
 #'   - `warmth`: Warmth score. Positive = warm (toward red/orange),
-#'               Negative = cool (toward blue). Range typically -1 to 1.
+#'               Negative = cool (toward blue). Range approx -1 to 1.
 #'
 #'   - `tint`: Green-magenta tint. Positive = magenta, Negative = green.
+#'             Range approx -1 to 1.
 #'
 #' @export
 extract_warmth <- function(tl_images, downsample = 200) {
@@ -202,25 +203,14 @@ extract_warmth <- function(tl_images, downsample = 200) {
     r <- as.numeric(data[, , 1])
     g <- as.numeric(data[, , 2])
     b <- as.numeric(data[, , 3])
+
+    mean_r <- mean(r); mean_g <- mean(g); mean_b <- mean(b)
+
+    # Warmth: Red vs Blue channel difference, normalized to approx -1..1
+    warmth <- (mean_r - mean_b) / 255
     
-    # Warmth: Red vs Blue channel difference (normalized)
-    # Warm images have more red, cool images have more blue
-    mean_r <- mean(r)
-    mean_g <- mean(g)
-    mean_b <- mean(b)
-    
-    # Warmth: (R - B) normalized by overall intensity
-    # Scale to roughly -1 to 1 range
-    intensity <- (mean_r + mean_g + mean_b) / 3
-    if (intensity > 0) {
-      warmth <- (mean_r - mean_b) / (255 * 2)  # Normalize to approx -0.5 to 0.5
-    } else {
-      warmth <- 0
-    }
-    
-    # Tint: Magenta vs Green
-    # Green has high G relative to R and B
-    # Magenta has high R and B relative to G
+    # Tint: Magenta vs Green, normalized to approx -1..1
+    # Magenta: high R and B relative to G; Green: high G relative to R and B
     tint <- ((mean_r + mean_b) / 2 - mean_g) / 255
     
     list(warmth = warmth, tint = tint)

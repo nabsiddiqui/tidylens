@@ -15,8 +15,9 @@ extract_warmth(tl_images, downsample = 200)
 The input tibble with added columns:
 \itemize{
 \item \code{warmth}: Warmth score. Positive = warm (toward red/orange),
-Negative = cool (toward blue). Range typically -1 to 1.
+Negative = cool (toward blue). Range approx -1 to 1.
 \item \code{tint}: Green-magenta tint. Positive = magenta, Negative = green.
+Range approx -1 to 1.
 }
 }
 \description{

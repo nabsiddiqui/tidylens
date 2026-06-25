@@ -107,3 +107,21 @@ coerce_column <- function(vals) {
   if (is.character(template)) return(vapply(vals, function(v) if (is.null(v) || is.na(v)) NA_character_ else as.character(v), character(1)))
   vapply(vals, function(v) if (is.null(v) || is.na(v)) NA_real_ else as.numeric(v), numeric(1))
 }
+
+#' Skin-tone pixel mask (RGB threshold rule, Kovac/Peer style)
+#'
+#' Returns a logical HxW mask of pixels matching the classic skin-tone rules.
+#' Shared by `detect_skin_tones()` and the shot-scale `skin_tone_ratio()`.
+#'
+#' @param img A magick image object.
+#' @return Logical matrix (H x W).
+#'
+#' @keywords internal
+#' @noRd
+skin_mask <- function(img) {
+  data <- as.integer(magick::image_data(img, channels = "rgb"))
+  r <- data[, , 1]; g <- data[, , 2]; b <- data[, , 3]
+  (r > 95) & (g > 40) & (b > 20) &
+    (r > g) & (r > b) &
+    (abs(as.integer(r) - as.integer(g)) > 15)
+}

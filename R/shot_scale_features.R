@@ -138,12 +138,8 @@ face_coverage_ratio <- function(img, info) {
 #' @noRd
 skin_tone_ratio <- function(img) {
   tryCatch({
-    data <- as.integer(magick::image_data(img, channels = "rgb"))
-    r <- data[, , 1]; g <- data[, , 2]; b <- data[, , 3]
-    skin_mask <- (r > 95) & (g > 40) & (b > 20) &
-                 (r > g) & (r > b) &
-                 (abs(as.integer(r) - as.integer(g)) > 15)
-    sum(skin_mask) / length(skin_mask)
+    mask <- skin_mask(img)
+    sum(mask) / length(mask)
   }, error = function(e) NA_real_)
 }
 
@@ -281,11 +277,11 @@ extract_shot_scale_features <- function(img, info = NULL) {
   laplacian_per_edge <- geo["laplacian_variance"] / (geo["edge_density"] + 1e-8)
 
   c(geo,
-    face_coverage = face_feats["face_coverage"],
-    n_faces = face_feats["n_faces"],
-    face_y_center = face_feats["face_y_center"],
+    face_coverage = unname(face_feats["face_coverage"]),
+    n_faces = unname(face_feats["n_faces"]),
+    face_y_center = unname(face_feats["face_y_center"]),
     skin_tone = unname(skin),
     color_entropy = cent,
-    skin_center = skin_center_interaction,
-    laplacian_per_edge = laplacian_per_edge)
+    skin_center = unname(skin_center_interaction),
+    laplacian_per_edge = unname(laplacian_per_edge))
 }

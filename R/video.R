@@ -371,17 +371,17 @@ detect_shot_changes <- function(images,
       img <- magick::image_resize(img, paste0(downsample, "x"))
     }
     
-    # Get pixel data
-    data <- as.integer(magick::image_data(img))
+    # Get pixel data (force RGB so grayscale sources yield a 3-channel array)
+    data <- as.integer(magick::image_data(img, channels = "rgb"))
     r <- as.vector(data[,,1])
     g <- as.vector(data[,,2])
     b <- as.vector(data[,,3])
     
-    # Compute normalized histograms
-    breaks <- seq(0, 256, length.out = bins + 1)
-    h_r <- hist(r, breaks = breaks, plot = FALSE)$counts
-    h_g <- hist(g, breaks = breaks, plot = FALSE)$counts
-    h_b <- hist(b, breaks = breaks, plot = FALSE)$counts
+    # Compute normalized histograms (value 0 included via floor + 1)
+    bin_width <- 256 / bins
+    h_r <- tabulate(as.integer(r / bin_width) + 1L, nbins = bins)
+    h_g <- tabulate(as.integer(g / bin_width) + 1L, nbins = bins)
+    h_b <- tabulate(as.integer(b / bin_width) + 1L, nbins = bins)
     
     # Normalize
     total <- sum(h_r) + sum(h_g) + sum(h_b)
