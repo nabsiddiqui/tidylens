@@ -1,7 +1,7 @@
 <p align="center">
-  <img src="logo.png" alt="Tidylens Logo" width="350">
+  <img src="man/figures/logo.png" alt="Tidylens Logo" width="350">
   <br>
-  <em>Tidy image-first analysis for digital humanities and film studies</em>
+  <em>Classical, tidy film-frame analysis in R</em>
 </p>
 
 <p align="center">
@@ -17,196 +17,84 @@
 devtools::install_github("nabsiddiqui/tidylens")
 ```
 
-**Optional dependencies** for enhanced features:
+Optional packages for video extraction and face detection:
+
 ```r
-install.packages("av")        # Video processing
-install.packages("tuneR")     # Audio analysis
-install.packages("image.libfacedetection", repos = "https://bnosac.r-universe.dev")  # Face detection
-install.packages(c("torch", "torchvision"))  # Neural embeddings
+install.packages("av")
+install.packages("image.libfacedetection", repos = "https://bnosac.r-universe.dev")
 ```
 
 ---
 
-## Quick Start
+## What tidylens Does
+
+Tidylens is a local-first toolkit for film analysis in R. It turns a video file into a `tl_frames` tibble, then lets you add classical, inspectable visual features and detect shots and shot scales.
+
+The default path uses no CNNs, no cloud APIs, and no opaque model services.
 
 ```r
 library(tidylens)
 
-# Load images from folder
-images <- load_images("path/to/images/")
-
-# Or from specific files
-images <- load_images(c("image1.jpg", "image2.png"))
-
-# Result: tl_images tibble with one row per image
-images
-#> ── Tidylens Image Collection ─────────────────────
-#> 50 images
-#> Formats: jpeg: 50
-#> Dimensions: 1280-1280 x 536-536
+frames <- frame_extract_by_seconds("movie.mp4", every = 5)
+#> tl_frames tibble: one row per extracted frame
 ```
 
 ---
 
-## Color Analysis
+## Video To Frames
 
 ```r
-images <- images |>
-  extract_brightness() |>        # brightness, brightness_std
-  extract_colourfulness() |>     # colourfulness (Hasler & Süsstrunk M3)
-  extract_warmth() |>            # warmth, tint
-  extract_dominant_color() |>    # dominant_color_r/g/b, dominant_color_hex
-  extract_hue_histogram()        # dominant_hue, hue_entropy
-```
-
-| Function | What It Measures | Example Use |
-|----------|-----------------|-------------|
-| `extract_brightness()` | How light/dark (0-255) | Night vs. day scenes |
-| `extract_colourfulness()` | How vivid the colors | Wes Anderson vs. gritty drama |
-| `extract_warmth()` | Orange vs. blue tones | Morning vs. night |
-| `extract_dominant_color()` | Single most common color | Scene classification |
-
----
-
-## Composition & Fluency
-
-```r
-images <- images |>
-  extract_fluency_metrics() |>   # simplicity, symmetry_h, symmetry_v, balance
-  extract_rule_of_thirds() |>    # rule_of_thirds score
-  extract_center_bias()          # center_bias, center_brightness
-```
-
-| Function | What It Measures | Example Use |
-|----------|-----------------|-------------|
-| `extract_fluency_metrics()` | Symmetry and balance | Classical vs. dynamic composition |
-| `extract_rule_of_thirds()` | Alignment with thirds | Professional photography score |
-| `extract_center_bias()` | Subject centering | Portrait vs. landscape framing |
-
----
-
-## Video Analysis
-
-```r
-library(av)
-
 # Get video info
 video_get_info("movie.mp4")
-#> duration: 237s, fps: 24, resolution: 1280x536
 
-# Extract frames at 1 fps
-frames <- video_extract_frames("movie.mp4", fps = 1)
+# Extract one frame every 5 seconds
+frames <- frame_extract_by_seconds("movie.mp4", every = 5)
 
-# Or sample 100 evenly-spaced frames
-frames <- video_sample_frames("movie.mp4", n = 100)
+# Sample 100 evenly spaced frames
+frames <- frame_extract_evenly("movie.mp4", n = 100)
 
-# Analyze like regular images
+# Pull encoder I-frames; fast, no shot detection
+keyframes <- frame_extract_keyframes("movie.mp4")
+```
+
+`frame_extract_by_seconds()`, `frame_extract_evenly()`, and `frame_extract_keyframes()` produce frame rows. These are useful for color, composition, face, camera-angle, and vector-representation features.
+
+---
+
+## Shot Analysis
+
+```r
+shots <- frame_extract_shots("movie.mp4")
+# columns include: shot_id, start_time, end_time, duration, shot_scale
+```
+
+`frame_extract_shots()` detects shot boundaries and returns one representative frame per shot. Shot rows carry `duration`, `start_time`, and `end_time` for downstream pacing analysis you do yourself.
+
+Shot scale is classified with a classical Random Forest trained on engineered features: spectral residual saliency, face coverage, geometry, color, and texture. It runs locally on CPU and returns three broad classes: `Close`, `Medium`, and `Long`.
+
+---
+
+## Per-Frame Features
+
+```r
 frames <- frames |>
-  extract_brightness() |>
-  extract_colourfulness()
+  frame_extract_brightness() |>
+  frame_extract_colourfulness() |>
+  frame_extract_warmth() |>
+  frame_extract_dominant_color() |>
+  frame_extract_fluency_metrics() |>
+  frame_extract_color_histogram()
 ```
 
----
+Selected feature families:
 
-## Shot Detection
-
-```r
-# Automatically detect shot boundaries
-shots <- video_extract_shots("movie.mp4", threshold = 0.4)
-
-# Returns: shot_id, start_time, end_time, duration, shot_scale
-```
-
-### Shot Scale Classification
-
-Tidylens classifies each shot into **3 broad scale categories** (Close, Medium, Long) using a classical Random Forest trained on engineered features (spectral residual saliency, face coverage, skin tone, geometric and texture features) following Canini et al. (2011) and Hou & Zhang (2007). Validated against the [CineScale dataset](https://doi.org/10.1016/j.dib.2021.106934) across 8 films and 6 directors: **~70-75% 3-class accuracy** on 4,394 frames. Runs entirely on CPU (no GPU required). For higher accuracy, see `vlm_scale()` for a VLM-based path via Ollama.
-
-| Group | What's in Frame |
-|-------|-----------------|
-| Close | Face or detail fills the frame (ECU, CU, MCU) |
-| Medium | Waist to knees (MS, MLS) |
-| Long | Full body or landscape (LS, ELS) |
-
-```r
-# Classical Random Forest (default)
-shots <- video_extract_shots("movie.mp4")
-# Returns: shot_scale (Close/Medium/Long), shot_scale_confidence
-
-# VLM-based path (optional, via Ollama) for higher accuracy
-images <- vlm_scale(images)
-# Adds: shot_scale, shot_scale_confidence
-```
-
----
-
-## Film Metrics
-
-```r
-library(dplyr)
-
-# Pacing metrics
-shots |> summarise(
-  asl = mean(duration),              # Average shot length
-  shot_count = n(),
-  shots_per_minute = n() / (sum(duration) / 60)
-)
-```
-
-**ASL Reference Values:**
-| Style | Typical ASL |
-|-------|-------------|
-| Fast action (Mad Max) | 2-3 seconds |
-| Modern blockbuster | 3-5 seconds |
-| Classical Hollywood | 5-8 seconds |
-| Art cinema | 10-30+ seconds |
-
----
-
-## Audio Analysis
-
-```r
-# Add audio features to shots
-shots <- extract_audio_features(shots, "movie.mp4")
-
-# Columns: audio_rms, audio_peak, audio_zcr, audio_silence_ratio,
-#          audio_low_freq_energy, audio_high_freq_energy, audio_spectral_centroid
-```
-
-| Column | What It Measures |
-|--------|-----------------|
-| `audio_rms` | Loudness (0-1) |
-| `audio_peak` | Loudest moment |
-| `audio_zcr` | Noisy/percussive content |
-| `audio_low_freq_energy` | Bass content |
-| `audio_high_freq_energy` | Treble content |
-
----
-
-## Detection
-
-```r
-images <- detect_skin_tones(images)   # skin_tone_prop (0-1)
-images <- detect_faces(images)        # face_count, face_areas (requires package)
-```
-
----
-
-## VLM Vision (Ollama)
-
-```bash
-# Setup
-brew install ollama && ollama serve
-ollama pull qwen2.5vl:7b
-```
-
-```r
-vlm_check_dependencies()
-
-images <- vlm_describe(images)    # Natural language descriptions
-images <- vlm_classify(images, categories = c("indoor", "outdoor"))
-images <- vlm_sentiment(images)   # Mood analysis
-images <- vlm_recognize(images)   # Object recognition
-```
+| Family | Examples |
+|--------|----------|
+| Color | `frame_extract_brightness()`, `frame_extract_warmth()`, `frame_extract_hue_histogram()` |
+| Composition | `frame_extract_fluency_metrics()`, `frame_extract_rule_of_thirds()`, `frame_extract_center_bias()` |
+| Detection | `frame_detect_faces()` |
+| Classification | `frame_classify_scale()`, `frame_classify_angle()` |
+| Vector representations | `frame_extract_color_histogram()` |
 
 ---
 
@@ -214,70 +102,42 @@ images <- vlm_recognize(images)   # Object recognition
 
 ```r
 library(tidylens)
-library(dplyr)
 
-# 1. Extract and analyze frames
-frames <- video_extract_frames("movie.mp4", fps = 1) |>
-  extract_brightness() |>
-  extract_colourfulness() |>
-  extract_warmth()
-
-# 2. Detect shots with audio
-shots <- video_extract_shots("movie.mp4") |>
-  extract_audio_features("movie.mp4")
-
-# 3. Compute metrics
-pacing <- shots |> summarise(
-  asl = mean(duration),
-  shot_count = n(),
-  avg_loudness = mean(audio_rms, na.rm = TRUE)
-)
-
-# 4. Export
-write.csv(frames, "frame_analysis.csv")
-write.csv(shots, "shot_data.csv")
+shots <- frame_extract_shots("movie.mp4") |>
+  frame_extract_colourfulness() |>
+  frame_extract_warmth() |>
+  frame_extract_fluency_metrics()
 ```
 
 ---
 
 ## Function Reference
 
-### Core I/O
-`load_images()`, `is_tl_images()`
+### Video
 
-### Video (`video_*`)
-`video_get_info()`, `video_extract_frames()`, `video_sample_frames()`, `video_extract_shots()`, `video_extract_shot_frames()`
+`video_download()`, `video_get_info()`, `frame_extract_by_seconds()`, `frame_extract_evenly()`, `frame_extract_shots()`, `frame_extract_keyframes()`
 
-### Film (`film_*`)
-`film_classify_scale()` (per-image shot scale classification, classical Random Forest)
+### Frame Features
 
-### Color (`extract_*`)
-`extract_brightness()`, `extract_color_mean()`, `extract_color_median()`, `extract_color_mode()`, `extract_saturation()`, `extract_colourfulness()`, `extract_warmth()`, `extract_dominant_color()`, `extract_color_variance()`, `extract_color_moments()`, `extract_hue_histogram()`
+`frame_extract_brightness()`, `frame_extract_color_mean()`, `frame_extract_color_median()`, `frame_extract_color_mode()`, `frame_extract_saturation()`, `frame_extract_colourfulness()`, `frame_extract_warmth()`, `frame_extract_dominant_color()`, `frame_extract_color_variance()`, `frame_extract_color_moments()`, `frame_extract_hue_histogram()`, `frame_extract_fluency_metrics()`, `frame_extract_rule_of_thirds()`, `frame_extract_visual_complexity()`, `frame_extract_center_bias()`, `frame_extract_color_histogram()`
 
-### Composition
-`extract_fluency_metrics()`, `extract_rule_of_thirds()`, `extract_visual_complexity()`, `extract_center_bias()`
+### Detection And Classification
 
-### Detection
-`detect_faces()`, `detect_skin_tones()`
+`frame_detect_faces()`, `frame_classify_scale()`, `frame_classify_angle()`
 
-### Audio
-`extract_audio_features()`, `extract_audio_rms()`
+### Utilities
 
-### Embeddings
-`extract_embeddings()`, `extract_color_histogram()`
-
-### VLM Vision
-`vlm_describe()`, `vlm_classify()`, `vlm_sentiment()`, `vlm_recognize()`, `vlm_scale()`, `vlm_check_ollama()`, `vlm_list_models()`, `vlm_pull_model()`, `vlm_check_dependencies()`
+`is_tl_frames()`
 
 ---
 
 ## License
 
-MIT © Nabeel Siddiqui
+MIT (c) Nabeel Siddiqui
 
 ## Citation
 
-```
-Siddiqui, N. (2026). tidylens: Tidy Image Analysis for Digital Humanities.
+```text
+Siddiqui, N. (2026). tidylens: Classical Film-Frame Analysis in R.
 R package. https://github.com/nabsiddiqui/tidylens
 ```

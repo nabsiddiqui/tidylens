@@ -1,19 +1,19 @@
-#' tidylens: Tidy Image Analysis for Digital Humanities
+#' tidylens: Classical Film-Frame Analysis in R
 #'
-#' A tidy, pipeable toolkit for image-first analysis targeting digital 
-#' humanities and film studies. Provides functions for loading image collections,
-#' extracting color metrics, composition analysis, face/object detection, 
-#' and neural embeddings.
+#' A tidy, pipeable toolkit for classical film-frame analysis. Tidylens turns
+#' video files into `tl_frames` tibbles, extracts inspectable visual features
+#' and vector representations, and detects shots and classifies shot scale and
+#' camera angle. The default path uses no CNNs, cloud APIs, opaque model
+#' services, or Python workflows.
 #'
 #' @keywords internal
 #'
 #' @import magick
 #' @import tibble
-#' @importFrom rlang .data "%||%"
-#' @importFrom dplyr mutate count arrange bind_cols
+#' @importFrom rlang "%||%"
+#' @importFrom dplyr bind_cols
 #' @importFrom purrr map discard
-#' @importFrom cli cli_alert_info cli_alert_success cli_alert_warning cli_abort cli_progress_bar cli_progress_update cli_progress_done
-#' @importFrom tools file_ext file_path_sans_ext
-#' @importFrom stats kmeans var sd median quantile fft predict setNames
-#' @importFrom utils adist head
+#' @importFrom cli cli_alert_info cli_alert_success cli_abort cli_progress_bar cli_progress_update cli_progress_done
+#' @importFrom tools file_path_sans_ext
+#' @importFrom stats kmeans var sd median fft predict setNames
 "_PACKAGE"

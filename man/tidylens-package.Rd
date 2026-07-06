@@ -4,12 +4,13 @@
 \name{tidylens-package}
 \alias{tidylens}
 \alias{tidylens-package}
-\title{tidylens: Tidy Image Analysis for Digital Humanities}
+\title{tidylens: Classical Film-Frame Analysis in R}
 \description{
-A tidy, pipeable toolkit for image-first analysis targeting digital
-humanities and film studies. Provides functions for loading image collections,
-extracting color metrics, composition analysis, face/object detection,
-and neural embeddings.
+A tidy, pipeable toolkit for classical film-frame analysis. Tidylens turns
+video files into \code{tl_frames} tibbles, extracts inspectable visual features
+and vector representations, and detects shots and classifies shot scale and
+camera angle. The default path uses no CNNs, cloud APIs, opaque model
+services, or Python workflows.
 }
 \seealso{
 Useful links:

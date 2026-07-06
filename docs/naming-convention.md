@@ -1,142 +1,47 @@
-# Tinylens Naming Convention
+# Tidylens Naming Convention
 
-## Core Principle: Verb-Object with Category Prefix
+Tidylens v3.x uses a film-first, classical-only vocabulary.
 
-Following tidyverse conventions, all exported functions use:
-- **snake_case**
-- **Verbs first** (action-oriented)
-- **Category prefix** for grouping related functions
+## Prefixes
 
----
+| Prefix | Meaning | Examples |
+|--------|---------|----------|
+| `frame_` | Per-frame operations and video-to-frame extraction | `frame_extract_shots()`, `frame_extract_brightness()`, `frame_classify_scale()` |
+| `video_` | Video file download/probe utilities | `video_download()`, `video_get_info()` |
 
-## Naming Patterns
+Unprefixed helpers are limited to object checks and sequence operations: `is_tl_frames()` and `detect_shot_changes()`.
 
-### 1. Image Feature Extraction: `extract_*`
-Functions that add columns to a tl_images tibble use `extract_`:
+## Core Data Contract
 
-```r
-# Color
-extract_brightness()
-extract_saturation()
-extract_warmth()
-extract_dominant_color()
-extract_color_variance()
-extract_color_mean()       # was: extract_average_colour_mean
-extract_color_median()     # was: extract_average_colour_median
-extract_color_mode()       # was: extract_average_colour_mode
-extract_color_moments()
-extract_colourfulness()    # was: compute_colourfulness_M3
-extract_hue_histogram()
+All public analysis functions operate on a `tl_frames` tibble. A row is one extracted frame or representative shot frame with at least `id` and `local_path`; shot rows also include timing columns such as `start_time`, `end_time`, and `duration`.
 
-# Fluency/Composition
-extract_fluency_metrics()
-extract_rule_of_thirds()
-extract_visual_complexity()
-extract_center_bias()      # was: analyze_center_bias
+The internal file loader is not part of the public API in v3.x. Users should start from video files with `frame_extract_*()`.
 
-# Embeddings
-extract_embeddings()       # was: compute_image_embeddings
-extract_color_histogram()  # was: compute_color_histogram
-```
-
-### 2. Detection Functions: `detect_*`
-Functions that detect objects/features:
+## Public Families
 
 ```r
-detect_faces()
-detect_skin_tones()
-detect_shot_changes()
+# Video to frames/shots
+frame_extract_by_seconds()
+frame_extract_evenly()
+frame_extract_keyframes()
+frame_extract_shots()
+
+# Frame features
+frame_extract_brightness()
+frame_extract_colourfulness()
+frame_extract_warmth()
+frame_extract_color_histogram()
+frame_detect_faces()
+frame_classify_scale()
+frame_classify_angle()
 ```
 
-### 3. Video Functions: `video_*`
-Functions that operate on video files:
+## v3.x Removals
 
-```r
-video_extract_frames()     # was: extract_frames
-video_extract_shots()      # was: extract_shots  
-video_get_info()           # was: get_video_info
-video_sample_frames()      # was: sample_frames
-video_extract_shot_frames() # was: extract_shot_frames
-```
+Tidylens is a classical, local, no-CNN film-frame analysis toolkit. The public workflow starts from video files rather than still-image collections.
 
-### 4. Film Metrics: `film_*`
-Functions for film/editing analysis:
+The remaining vector representation is `frame_extract_color_histogram()`.
 
-```r
-film_compute_asl()         # was: compute_asl
-film_compute_rhythm()      # was: compute_shot_rhythm
-film_summarize_scales()    # was: summarize_shot_scales
-film_classify_scale()      # was: get_shot_style
-```
+## v3.1 Removals
 
-### 5. VLM Functions: `vlm_*`
-All VLM-related functions (vision-language model, via Ollama):
-
-```r
-vlm_describe()
-vlm_classify()
-vlm_sentiment()
-vlm_recognize()
-vlm_scale()
-
-# Setup helpers
-vlm_check_ollama()         # was: check_ollama
-vlm_list_models()          # was: list_vision_models
-vlm_pull_model()           # was: pull_vision_model
-vlm_check_dependencies()   # was: check_llm_dependencies
-vlm_setup_instructions()
-```
-
-### 6. Core I/O: `load_*` / `is_*`
-```r
-load_images()
-is_tl_images()
-```
-
----
-
-## Summary of Changes
-
-| Old Name | New Name | Reason |
-|----------|----------|--------|
-| `extract_average_colour_mean` | `extract_color_mean` | Shorter, American spelling |
-| `extract_average_colour_median` | `extract_color_median` | Shorter, American spelling |
-| `extract_average_colour_mode` | `extract_color_mode` | Shorter, American spelling |
-| `compute_colourfulness_M3` | `extract_colourfulness` | extract_ prefix, simpler |
-| `analyze_center_bias` | `extract_center_bias` | extract_ prefix consistency |
-| `compute_image_embeddings` | `extract_embeddings` | extract_ prefix |
-| `compute_color_histogram` | `extract_color_histogram` | extract_ prefix |
-| `extract_frames` | `video_extract_frames` | video_ prefix |
-| `extract_shots` | `video_extract_shots` | video_ prefix |
-| `get_video_info` | `video_get_info` | video_ prefix |
-| `sample_frames` | `video_sample_frames` | video_ prefix |
-| `extract_shot_frames` | `video_extract_shot_frames` | video_ prefix |
-| `compute_asl` | `film_compute_asl` | film_ prefix |
-| `compute_shot_rhythm` | `film_compute_rhythm` | film_ prefix |
-| `summarize_shot_scales` | `film_summarize_scales` | film_ prefix |
-| `get_shot_style` | `film_classify_scale` | film_ prefix, verb |
-| `check_ollama` | `vlm_check_ollama` | vlm_ prefix |
-| `list_vision_models` | `vlm_list_models` | vlm_ prefix |
-| `pull_vision_model` | `vlm_pull_model` | vlm_ prefix |
-| `check_llm_dependencies` | `vlm_check_dependencies` | vlm_ prefix |
-| `llm_describe` (v1.x) | `vlm_describe` | LLM → VLM rename |
-| `llm_classify` (v1.x) | `vlm_classify` | LLM → VLM rename |
-| `llm_sentiment` (v1.x) | `vlm_sentiment` | LLM → VLM rename |
-| `llm_recognize` (v1.x) | `vlm_recognize` | LLM → VLM rename |
-
----
-
-## Backward Compatibility
-
-For v1.x releases, deprecated functions will be kept as aliases:
-
-```r
-# Deprecated alias (kept for compatibility)
-compute_colourfulness_M3 <- function(...) {
-
-  .Deprecated("extract_colourfulness")
-  extract_colourfulness(...)
-}
-```
-
-These will be removed in v2.0.
+The film-level summary layer (`film_compute_asl()`, `film_compute_rhythm()`, `film_summarize_scales()`) and the standalone `frame_extract_shot_frames()` helper were removed. The `film_` prefix is retired. `frame_extract_shots(position=)` accepts `"first"`, `"middle"`, or `"last"`.

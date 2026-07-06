@@ -2,17 +2,40 @@
 % Please edit documentation in R/video.R
 \name{detect_shot_changes}
 \alias{detect_shot_changes}
-\title{Detect shot changes in a sequence of images}
+\title{Detect shot changes in a sequence of frames}
 \usage{
-detect_shot_changes(images, threshold = 0.5, bins = 16, downsample = 100)
+detect_shot_changes(
+  frames,
+  method = c("adaptive", "content", "histogram"),
+  threshold = 0.5,
+  adaptive_threshold = 3,
+  window = 2,
+  min_content_val = 15,
+  min_scene_len = 0,
+  bins = 16,
+  downsample = 100
+)
 }
 \arguments{
-\item{images}{A tl_images tibble.}
+\item{frames}{A tl_frames tibble.}
 
-\item{threshold}{Threshold for detecting a cut. Higher = fewer cuts detected.
-Default is 0.5. Values typically range from 0.3 (sensitive) to 0.8 (conservative).}
+\item{method}{Shot-detection method: \code{"adaptive"} (default), \code{"content"},
+or \code{"histogram"} (original pre-1.x behaviour).}
 
-\item{bins}{Number of histogram bins per channel. Default 16.}
+\item{threshold}{Threshold for the histogram and content methods. Higher =
+fewer cuts. Default 0.5.}
+
+\item{adaptive_threshold}{Adaptive ratio cutoff (adaptive method). Default 3.0.}
+
+\item{window}{Rolling-mean half-width in frames (adaptive method). Default 2.}
+
+\item{min_content_val}{Minimum absolute HSV score to register a cut
+(adaptive method). Default 15.}
+
+\item{min_scene_len}{Minimum gap between cuts, in frames. Suppresses
+flash/strobe; set to 0 to disable. Default 0.}
+
+\item{bins}{Histogram bins per channel (histogram method). Default 16.}
 
 \item{downsample}{Max dimension for resizing before analysis. Default 100.}
 }
@@ -34,22 +57,41 @@ computes normalized color histograms for each frame and measures the
 chi-squared distance between consecutive frames.
 }
 \details{
-The algorithm works by:
-\enumerate{
-\item Computing a color histogram for each frame (RGB channels combined).
-\item Calculating chi-squared distance between consecutive frame histograms.
-\item Marking frames where the distance exceeds the threshold as shot boundaries.
+Three methods are supported, selected via \code{method}:
+\itemize{
+\item \code{"histogram"} (original): normalised RGB color histograms compared with
+a chi-squared distance; a cut is reported wherever the distance exceeds
+\code{threshold}. Reproduces the pre-1.x default bit-for-bit.
+\item \code{"content"}: HSV mean absolute pixel distance (the PySceneDetect
+ContentDetector score); cut where \code{score >= threshold}. Scores are on
+the 0-255 scale, so \code{threshold} here is independent of the histogram scale.
+\item \code{"adaptive"} (default): same HSV score, but the threshold is not fixed.
+For each frame \code{t}, \verb{ratio = score_t / mean(score over +/- window frames, excluding t)}. A cut is reported when \code{ratio >= adaptive_threshold}
+\emph{and} \code{score_t >= min_content_val}. Self-calibrates to local pacing, so
+it suppresses false cuts from fast camera motion / lighting flicker that
+a single global threshold cannot.
 }
 
-This method detects hard cuts well but may miss gradual transitions (dissolves, fades).
-For gradual transitions, use a lower threshold or consider the frame difference values.
+\code{min_scene_len} (frames) suppresses cuts closer than this to the previous
+accepted cut — a flash/strobe guard. Set to 0 to disable.
+
+The per-frame scores are attached as attribute \code{"frame_differences"} for
+inspection; the method is attached as attribute \code{"method"}.
+}
+\references{
+Castellano, B. PySceneDetect ContentDetector / AdaptiveDetector.
+\url{https://www.scenedetect.com/docs/latest/api/detectors.html}
+
+Lienhart, R. (2001). Reliable Transition Detection in Videos.
+\url{https://doi.org/10.1145/500141.500149}
 }
 \seealso{
 Other video: 
+\code{\link{frame_extract_by_seconds}()},
+\code{\link{frame_extract_evenly}()},
+\code{\link{frame_extract_keyframes}()},
+\code{\link{frame_extract_shots}()},
 \code{\link{video_download}()},
-\code{\link{video_extract_frames}()},
-\code{\link{video_extract_shots}()},
-\code{\link{video_get_info}()},
-\code{\link{video_sample_frames}()}
+\code{\link{video_get_info}()}
 }
 \concept{video}

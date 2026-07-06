@@ -27,9 +27,10 @@ Retrieve metadata about a video file as a tibble.
 \seealso{
 Other video: 
 \code{\link{detect_shot_changes}()},
-\code{\link{video_download}()},
-\code{\link{video_extract_frames}()},
-\code{\link{video_extract_shots}()},
-\code{\link{video_sample_frames}()}
+\code{\link{frame_extract_by_seconds}()},
+\code{\link{frame_extract_evenly}()},
+\code{\link{frame_extract_keyframes}()},
+\code{\link{frame_extract_shots}()},
+\code{\link{video_download}()}
 }
 \concept{video}

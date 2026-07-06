@@ -10,7 +10,7 @@ NULL
 #'
 #' Detect faces using the image.libfacedetection package.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param min_size Minimum face size in pixels. Default 20.
 #'
 #' @return The input tibble with added columns:
@@ -22,14 +22,14 @@ NULL
 #'
 #' @family detection
 #' @export
-detect_faces <- function(tl_images, min_size = 20) {
-  validate_tl_images(tl_images)
+frame_detect_faces <- function(tl_frames, min_size = 20) {
+  validate_tl_frames(tl_frames)
   
   if (!requireNamespace("image.libfacedetection", quietly = TRUE)) {
     cli::cli_abort("Package {.pkg image.libfacedetection} is required. Install with: install.packages('image.libfacedetection', repos = 'https://bnosac.r-universe.dev')")
   }
   
-  n <- nrow(tl_images)
+  n <- nrow(tl_frames)
   n_faces <- integer(n)
   faces <- vector("list", n)
   face_area_prop <- numeric(n)
@@ -37,9 +37,9 @@ detect_faces <- function(tl_images, min_size = 20) {
   cli::cli_progress_bar("Detecting faces", total = n)
   
   for (i in seq_len(n)) {
-    path <- tl_images$local_path[i]
-    img_width <- tl_images$width[i]
-    img_height <- tl_images$height[i]
+    path <- tl_frames$local_path[i]
+    img_width <- tl_frames$width[i]
+    img_height <- tl_frames$height[i]
     
     tryCatch({
       img <- magick::image_read(path)
@@ -77,33 +77,9 @@ detect_faces <- function(tl_images, min_size = 20) {
   
   cli::cli_progress_done()
   
-  tl_images$n_faces <- n_faces
-  tl_images$faces <- faces
-  tl_images$face_area_prop <- face_area_prop
+  tl_frames$n_faces <- n_faces
+  tl_frames$faces <- faces
+  tl_frames$face_area_prop <- face_area_prop
   
-  tl_images
-}
-
-#' Simple person detection heuristic
-#'
-#' A simple heuristic-based approach to estimate if people are present
-#' based on skin tone detection.
-#'
-#' @param tl_images A tl_images tibble.
-#' @param downsample Maximum side length for analysis. Default 200.
-#'
-#' @return The input tibble with added column:
-#'   - `skin_tone_prop`: Proportion of pixels matching skin tone ranges.
-#'
-#' @family detection
-#' @export
-detect_skin_tones <- function(tl_images, downsample = 200) {
-  validate_tl_images(tl_images)
-  
-  results <- map_images(tl_images, function(img) {
-    mask <- skin_mask(img)
-    list(skin_tone_prop = sum(mask) / length(mask))
-  }, downsample = downsample, msg = "Detecting skin tones")
-  
-  bind_results(tl_images, results)
+  tl_frames
 }

@@ -10,7 +10,7 @@ NULL
 #'
 #' Compute overall image brightness (mean pixel intensity).
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param downsample Maximum side length for analysis. Default 200.
 #' @param method `"mean"` or `"median"`.
 #'
@@ -23,12 +23,13 @@ NULL
 #' @export
 #' @examples
 #' \dontrun{
-#' images <- load_images("images/") |> extract_brightness()
+#' frames <- frame_extract_by_seconds("film.mp4", every = 5) |>
+#'   frame_extract_brightness()
 #' }
-extract_brightness <- function(tl_images, downsample = 200, method = "mean") {
-  validate_tl_images(tl_images)
+frame_extract_brightness <- function(tl_frames, downsample = 200, method = "mean") {
+  validate_tl_frames(tl_frames)
   
-  results <- map_images(tl_images, function(img) {
+  results <- map_images(tl_frames, function(img) {
     # Convert to grayscale
     gray <- magick::image_convert(img, colorspace = "gray")
     # as.integer on image_data returns HxWxC array
@@ -48,14 +49,14 @@ extract_brightness <- function(tl_images, downsample = 200, method = "mean") {
     }
   }, downsample = downsample, msg = "Extracting brightness")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
 
 #' Extract mean color from images
 #'
 #' Compute per-image mean color in RGB color space.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param downsample Maximum side length for analysis. Default 200.
 #'
 #' @return The input tibble with added columns:
@@ -65,10 +66,10 @@ extract_brightness <- function(tl_images, downsample = 200, method = "mean") {
 #'
 #' @family color
 #' @export
-extract_color_mean <- function(tl_images, downsample = 200) {
-  validate_tl_images(tl_images)
+frame_extract_color_mean <- function(tl_frames, downsample = 200) {
+  validate_tl_frames(tl_frames)
   
-  results <- map_images(tl_images, function(img) {
+  results <- map_images(tl_frames, function(img) {
     # as.integer converts to HxWxC format
     data <- as.integer(magick::image_data(img, channels = "rgb"))
     # data is [height, width, channels] after as.integer
@@ -91,14 +92,14 @@ extract_color_mean <- function(tl_images, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting mean color")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
 
 #' Extract saturation from images
 #'
 #' Compute overall image saturation in HSV color space.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param downsample Maximum side length for analysis. Default 200.
 #'
 #' @return The input tibble with added columns:
@@ -110,10 +111,10 @@ extract_color_mean <- function(tl_images, downsample = 200) {
 #'
 #' @family color
 #' @export
-extract_saturation <- function(tl_images, downsample = 200) {
-  validate_tl_images(tl_images)
+frame_extract_saturation <- function(tl_frames, downsample = 200) {
+  validate_tl_frames(tl_frames)
   
-  results <- map_images(tl_images, function(img) {
+  results <- map_images(tl_frames, function(img) {
     data <- as.integer(magick::image_data(img, channels = "rgb"))
     # data is HxWxC after as.integer
     r_vals <- data[, , 1] / 255.0
@@ -134,14 +135,14 @@ extract_saturation <- function(tl_images, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting saturation")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
 
 #' Compute colourfulness (M3 metric)
 #'
 #' Compute the Hasler & Süsstrunk M3 colourfulness metric.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param downsample Maximum side length for analysis. Default 200.
 #'
 #' @return The input tibble with added column:
@@ -152,10 +153,10 @@ extract_saturation <- function(tl_images, downsample = 200) {
 #'
 #' @family color
 #' @export
-extract_colourfulness <- function(tl_images, downsample = 200) {
-  validate_tl_images(tl_images)
+frame_extract_colourfulness <- function(tl_frames, downsample = 200) {
+  validate_tl_frames(tl_frames)
   
-  results <- map_images(tl_images, function(img) {
+  results <- map_images(tl_frames, function(img) {
     data <- as.integer(magick::image_data(img, channels = "rgb"))
     # data is HxWxC after as.integer
     r <- as.numeric(data[, , 1])
@@ -176,14 +177,14 @@ extract_colourfulness <- function(tl_images, downsample = 200) {
     list(colourfulness = M3)
   }, downsample = downsample, msg = "Computing colourfulness")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
 
 #' Extract color warmth/coolness
 #'
 #' Measure how warm (red/orange/yellow) or cool (blue/cyan) an image appears.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param downsample Maximum side length for analysis. Default 200.
 #'
 #' @return The input tibble with added columns:
@@ -194,10 +195,10 @@ extract_colourfulness <- function(tl_images, downsample = 200) {
 #'             Range approx -1 to 1.
 #'
 #' @export
-extract_warmth <- function(tl_images, downsample = 200) {
-  validate_tl_images(tl_images)
+frame_extract_warmth <- function(tl_frames, downsample = 200) {
+  validate_tl_frames(tl_frames)
   
-  results <- map_images(tl_images, function(img) {
+  results <- map_images(tl_frames, function(img) {
     data <- as.integer(magick::image_data(img, channels = "rgb"))
     # data is HxWxC after as.integer
     r <- as.numeric(data[, , 1])
@@ -216,15 +217,14 @@ extract_warmth <- function(tl_images, downsample = 200) {
     list(warmth = warmth, tint = tint)
   }, downsample = downsample, msg = "Extracting warmth")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
 
 #' Extract dominant color
 #'
 #' Find the most common color in an image using k-means clustering.
 #'
-#' @param tl_images A tl_images tibble.
-#' @param n_colors Number of colors to extract. Default 1 (just dominant).
+#' @param tl_frames A tl_frames tibble.
 #' @param downsample Maximum side length for analysis. Default 100.
 #'
 #' @return The input tibble with added columns:
@@ -234,30 +234,27 @@ extract_warmth <- function(tl_images, downsample = 200) {
 #'
 #' @family color
 #' @export
-extract_dominant_color <- function(tl_images, n_colors = 1, downsample = 100) {
-  validate_tl_images(tl_images)
-  
-  results <- map_images(tl_images, function(img) {
+frame_extract_dominant_color <- function(tl_frames, downsample = 100) {
+  validate_tl_frames(tl_frames)
+
+  results <- map_images(tl_frames, function(img) {
     data <- as.integer(magick::image_data(img, channels = "rgb"))
     # data is HxWxC after as.integer
     n_pixels <- prod(dim(data)[1:2])
-    
+
     # Reshape to n_pixels x 3 matrix
     rgb_matrix <- matrix(
       c(as.vector(data[,,1]), as.vector(data[,,2]), as.vector(data[,,3])),
       ncol = 3
     )
-    
-    # K-means clustering
+
+    # K-means clustering (single dominant cluster)
     tryCatch({
-      km <- stats::kmeans(rgb_matrix, centers = n_colors, nstart = 3, iter.max = 20)
-      
-      # Find dominant cluster (largest)
-      cluster_sizes <- table(km$cluster)
-      dominant_idx <- as.integer(names(which.max(cluster_sizes)))
-      
-      dominant_rgb <- km$centers[dominant_idx, ]
-      proportion <- max(cluster_sizes) / n_pixels
+      km <- stats::kmeans(rgb_matrix, centers = 1, nstart = 3, iter.max = 20)
+
+      dominant_rgb <- km$centers[1, ]
+      # Single cluster covers the whole image; proportion is 1.
+      proportion <- 1
       
       list(
         dominant_color_r = as.integer(round(dominant_rgb[1])),
@@ -279,14 +276,14 @@ extract_dominant_color <- function(tl_images, n_colors = 1, downsample = 100) {
     })
   }, downsample = downsample, msg = "Extracting dominant color")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
 
 #' Extract color variance
 #'
 #' Measure the variance/spread of colors in the image.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param downsample Maximum side length for analysis. Default 200.
 #'
 #' @return The input tibble with added columns:
@@ -295,10 +292,10 @@ extract_dominant_color <- function(tl_images, n_colors = 1, downsample = 100) {
 #'
 #' @family color
 #' @export
-extract_color_variance <- function(tl_images, downsample = 200) {
-  validate_tl_images(tl_images)
+frame_extract_color_variance <- function(tl_frames, downsample = 200) {
+  validate_tl_frames(tl_frames)
   
-  results <- map_images(tl_images, function(img) {
+  results <- map_images(tl_frames, function(img) {
     data <- as.integer(magick::image_data(img, channels = "rgb"))
     r <- as.numeric(data[, , 1])
     g <- as.numeric(data[, , 2])
@@ -325,14 +322,14 @@ extract_color_variance <- function(tl_images, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting color variance")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
 
 #' Extract median color
 #'
 #' Compute per-image median color in RGB.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param downsample Maximum side length for analysis. Default 200.
 #'
 #' @return The input tibble with added columns:
@@ -341,10 +338,10 @@ extract_color_variance <- function(tl_images, downsample = 200) {
 #'
 #' @family color
 #' @export
-extract_color_median <- function(tl_images, downsample = 200) {
-  validate_tl_images(tl_images)
+frame_extract_color_median <- function(tl_frames, downsample = 200) {
+  validate_tl_frames(tl_frames)
   
-  results <- map_images(tl_images, function(img) {
+  results <- map_images(tl_frames, function(img) {
     data <- as.integer(magick::image_data(img, channels = "rgb"))
     r_vals <- data[, , 1] / 255.0
     g_vals <- data[, , 2] / 255.0
@@ -364,14 +361,14 @@ extract_color_median <- function(tl_images, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting median color")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
 
 #' Extract mode color
 #'
 #' Compute per-image mode (most frequent) color after binning.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param n_bins Number of bins per channel. Default 32.
 #' @param downsample Maximum side length for analysis. Default 200.
 #'
@@ -382,10 +379,10 @@ extract_color_median <- function(tl_images, downsample = 200) {
 #'
 #' @family color
 #' @export
-extract_color_mode <- function(tl_images, n_bins = 32, downsample = 200) {
-  validate_tl_images(tl_images)
+frame_extract_color_mode <- function(tl_frames, n_bins = 32, downsample = 200) {
+  validate_tl_frames(tl_frames)
   
-  results <- map_images(tl_images, function(img) {
+  results <- map_images(tl_frames, function(img) {
     data <- as.integer(magick::image_data(img, channels = "rgb"))
     r_vals <- as.vector(data[, , 1])
     g_vals <- as.vector(data[, , 2])
@@ -397,19 +394,19 @@ extract_color_mode <- function(tl_images, n_bins = 32, downsample = 200) {
     g_binned <- floor(g_vals / bin_size)
     b_binned <- floor(b_vals / bin_size)
     
-    # Create composite bin ID
-    bin_id <- paste(r_binned, g_binned, b_binned, sep = "-")
-    
+    # Composite bin ID (integer encoding avoids paste/strsplit round-trip)
+    bin_id <- r_binned + g_binned * n_bins + b_binned * n_bins * n_bins
+
     # Find most frequent bin
-    freq_table <- table(bin_id)
-    mode_bin <- names(which.max(freq_table))
-    mode_freq <- max(freq_table) / length(bin_id)
-    
-    # Convert back to RGB
-    parts <- as.integer(strsplit(mode_bin, "-")[[1]])
-    mode_r <- (parts[1] + 0.5) * bin_size / 255
-    mode_g <- (parts[2] + 0.5) * bin_size / 255
-    mode_b <- (parts[3] + 0.5) * bin_size / 255
+    freq_table <- tabulate(bin_id + 1L)
+    mode_idx <- which.max(freq_table)
+    mode_freq <- freq_table[mode_idx] / length(bin_id)
+
+    # Decode bin ID back to per-channel bins
+    mode_bin <- mode_idx - 1L
+    mode_r <- (mode_bin %% n_bins + 0.5) * bin_size / 255
+    mode_g <- (floor(mode_bin / n_bins) %% n_bins + 0.5) * bin_size / 255
+    mode_b <- (floor(mode_bin / (n_bins * n_bins)) + 0.5) * bin_size / 255
     
     mode_hex <- grDevices::rgb(mode_r, mode_g, mode_b)
     
@@ -422,14 +419,14 @@ extract_color_mode <- function(tl_images, n_bins = 32, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting mode color")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
 
 #' Extract hue histogram from images
 #'
 #' Compute hue distribution and statistics from HSV color space.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param n_bins Number of hue bins. Default 12 (30-degree bins).
 #' @param downsample Maximum side length for analysis. Default 200.
 #'
@@ -442,14 +439,14 @@ extract_color_mode <- function(tl_images, n_bins = 32, downsample = 200) {
 #'
 #' @family color
 #' @export
-extract_hue_histogram <- function(tl_images, n_bins = 12, downsample = 200) {
-  validate_tl_images(tl_images)
+frame_extract_hue_histogram <- function(tl_frames, n_bins = 12, downsample = 200) {
+  validate_tl_frames(tl_frames)
   
   # Hue names for 12 bins (30-degree each)
   hue_names <- c("red", "orange", "yellow", "chartreuse", "green", "spring",
                  "cyan", "azure", "blue", "violet", "magenta", "rose")
   
-  results <- map_images(tl_images, function(img) {
+  results <- map_images(tl_frames, function(img) {
     data <- as.integer(magick::image_data(img, channels = "rgb"))
     r_vals <- data[, , 1] / 255.0
     g_vals <- data[, , 2] / 255.0
@@ -529,7 +526,7 @@ extract_hue_histogram <- function(tl_images, n_bins = 12, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting hue histogram")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
 
 #' Extract Color Moments
@@ -545,13 +542,11 @@ extract_hue_histogram <- function(tl_images, n_bins = 12, downsample = 200) {
 #' - **Standard deviation**: How spread out the colors are.
 #' - **Skewness**: Whether colors lean toward dark or bright.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param downsample Maximum side length for analysis. Default 200.
-#' @param color_space `"rgb"` (default) or `"lab"` for perceptual color space.
 #'
 #' @return The input tibble with added columns:
-#'   - For RGB: `cm_r_mean`, `cm_r_std`, `cm_r_skew` (and same for g, b).
-#'   - For LAB: `cm_l_mean`, `cm_l_std`, `cm_l_skew` (and same for a, b).
+#'   - `cm_r_mean`, `cm_r_std`, `cm_r_skew` (and same for g, b).
 #'
 #' @details
 #' Color moments provide a more compact representation than full histograms.
@@ -571,17 +566,14 @@ extract_hue_histogram <- function(tl_images, n_bins = 12, downsample = 200) {
 #' @export
 #' @examples
 #' \dontrun{
-#' images <- load_images("images/") |> extract_color_moments()
+#' frames <- frame_extract_by_seconds("film.mp4", every = 5) |>
+#'   frame_extract_color_moments()
 #' # Check if image leans warm (high r, low b)
 #' images$cm_r_mean > images$cm_b_mean
 #' }
-extract_color_moments <- function(tl_images, downsample = 200, color_space = "rgb") {
-  validate_tl_images(tl_images)
-  
-  if (!color_space %in% c("rgb", "lab")) {
-    cli::cli_abort("{.arg color_space} must be 'rgb' or 'lab'")
-  }
-  
+frame_extract_color_moments <- function(tl_frames, downsample = 200) {
+  validate_tl_frames(tl_frames)
+
   # Helper for skewness
   calc_skewness <- function(x) {
     n <- length(x)
@@ -590,30 +582,25 @@ extract_color_moments <- function(tl_images, downsample = 200, color_space = "rg
     if (s == 0) return(0)
     sum((x - m)^3) / ((n - 1) * s^3)
   }
-  
-  results <- map_images(tl_images, function(img) {
-    if (color_space == "lab") {
-      img <- magick::image_convert(img, colorspace = "LAB")
-    }
-    
+
+  results <- map_images(tl_frames, function(img) {
     data <- as.integer(magick::image_data(img))
     # data is [height, width, channels] after as.integer
-    
+
     c1 <- as.numeric(data[, , 1]) / 255.0
     c2 <- as.numeric(data[, , 2]) / 255.0
     c3 <- as.numeric(data[, , 3]) / 255.0
-    
-    pfx <- if (color_space == "rgb") c("r", "g", "b") else c("l", "a", "b")
+
     setNames(list(
       mean(c1), stats::sd(c1), calc_skewness(c1),
       mean(c2), stats::sd(c2), calc_skewness(c2),
       mean(c3), stats::sd(c3), calc_skewness(c3)
     ), c(
-      paste0("cm_", pfx[1], "_", c("mean","std","skew")),
-      paste0("cm_", pfx[2], "_", c("mean","std","skew")),
-      paste0("cm_", pfx[3], "_", c("mean","std","skew"))
+      paste0("cm_", c("r"), "_", c("mean","std","skew")),
+      paste0("cm_", c("g"), "_", c("mean","std","skew")),
+      paste0("cm_", c("b"), "_", c("mean","std","skew"))
     ))
-  }, downsample = downsample, msg = paste0("Extracting color moments (", color_space, ")"))
-  
-  bind_results(tl_images, results)
+  }, downsample = downsample, msg = "Extracting color moments")
+
+  bind_results(tl_frames, results)
 }

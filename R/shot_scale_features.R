@@ -30,7 +30,9 @@ spectral_residual_saliency <- function(gray_mat) {
   nr <- nrow(gray_mat); nc <- ncol(gray_mat)
   if (nr < 8 || nc < 8) {
     return(list(map = matrix(0, nr, nc), coverage = 0,
-                centroid_x = 0.5, centroid_y = 0.5, peak = 0))
+                centroid_x = 0.5, centroid_y = 0.5, peak = 0,
+                bbox_width = 0, bbox_height = 0, bbox_area = 0,
+                bbox_aspect = 0))
   }
   max_side <- 128L
   if (max(nr, nc) > max_side) {
@@ -77,12 +79,21 @@ spectral_residual_saliency <- function(gray_mat) {
     total_salience <- sum(S)
     centroid_y <- sum(row(S) * S) / total_salience / nr
     centroid_x <- sum(col(S) * S) / total_salience / nc
+    rows <- row(salient)[salient]
+    cols <- col(salient)[salient]
+    bbox_height <- (max(rows) - min(rows) + 1L) / nr
+    bbox_width <- (max(cols) - min(cols) + 1L) / nc
+    bbox_area <- bbox_width * bbox_height
+    bbox_aspect <- bbox_width / (bbox_height + 1e-8)
   } else {
     centroid_y <- 0.5; centroid_x <- 0.5
+    bbox_width <- 0; bbox_height <- 0; bbox_area <- 0; bbox_aspect <- 0
   }
   peak <- max(S)
   list(map = S, coverage = coverage,
-       centroid_x = centroid_x, centroid_y = centroid_y, peak = peak)
+       centroid_x = centroid_x, centroid_y = centroid_y, peak = peak,
+       bbox_width = bbox_width, bbox_height = bbox_height,
+       bbox_area = bbox_area, bbox_aspect = bbox_aspect)
 }
 
 #' Face coverage ratio from cascade face detection
@@ -126,23 +137,6 @@ face_coverage_ratio <- function(img, info) {
   }, error = function(e) c(face_coverage = 0, n_faces = 0, face_y_center = 0.5))
 }
 
-#' Skin-tone pixel proportion
-#'
-#' Classic RGB threshold rules (Kovac et al. / Peer et al.) for skin
-#' detection. Pure color, no model.
-#'
-#' @param img A magick image object.
-#' @return Numeric scalar in 0..1 (fraction of skin-tone pixels).
-#'
-#' @keywords internal
-#' @noRd
-skin_tone_ratio <- function(img) {
-  tryCatch({
-    mask <- skin_mask(img)
-    sum(mask) / length(mask)
-  }, error = function(e) NA_real_)
-}
-
 #' Geometric and texture features for shot scale
 #'
 #' Combines saliency-derived geometric cues with spatial texture features
@@ -172,9 +166,11 @@ geometric_features <- function(img) {
   if (nr < 10 || nc < 10) {
     return(c(salience_coverage = 0, salience_centroid_x = 0.5,
              salience_centroid_y = 0.5, salience_peak = 0,
+             salience_bbox_width = 0, salience_bbox_height = 0,
+             salience_bbox_area = 0, salience_bbox_aspect = 0,
              upper_mass_ratio = 0.5, center_periphery_ratio = 1,
              laplacian_variance = 0, edge_density = 0,
-             spatial_detail = 0, spatial_cv = 0, color_entropy = 0))
+             spatial_detail = 0, spatial_cv = 0))
   }
 
   sal <- spectral_residual_saliency(mat)
@@ -223,6 +219,10 @@ geometric_features <- function(img) {
     salience_centroid_x = sal$centroid_x,
     salience_centroid_y = sal$centroid_y,
     salience_peak = sal$peak,
+    salience_bbox_width = sal$bbox_width,
+    salience_bbox_height = sal$bbox_height,
+    salience_bbox_area = sal$bbox_area,
+    salience_bbox_aspect = sal$bbox_aspect,
     upper_mass_ratio = upper_mass_ratio,
     center_periphery_ratio = center_periphery_ratio,
     laplacian_variance = laplacian_variance,
@@ -259,7 +259,7 @@ color_entropy <- function(img) {
 #'
 #' @param img A magick image object.
 #' @param info Image info list from `magick::image_info()`.
-#' @return A named numeric vector of length 13.
+#' @return A named numeric vector of shot-scale features.
 #'
 #' @keywords internal
 #' @noRd
@@ -267,21 +267,13 @@ extract_shot_scale_features <- function(img, info = NULL) {
   if (is.null(info)) info <- magick::image_info(img)
   geo <- geometric_features(img)
   face_feats <- face_coverage_ratio(img, info)
-  skin <- skin_tone_ratio(img)
   cent <- color_entropy(img)
-
-  # Derived interaction features that help when face detection fails:
-  # close-ups without detectable faces still have skin-tone concentrated
-  # centrally and higher high-frequency detail.
-  skin_center_interaction <- unname(skin) * geo["center_periphery_ratio"]
   laplacian_per_edge <- geo["laplacian_variance"] / (geo["edge_density"] + 1e-8)
 
   c(geo,
     face_coverage = unname(face_feats["face_coverage"]),
     n_faces = unname(face_feats["n_faces"]),
     face_y_center = unname(face_feats["face_y_center"]),
-    skin_tone = unname(skin),
     color_entropy = cent,
-    skin_center = unname(skin_center_interaction),
     laplacian_per_edge = unname(laplacian_per_edge))
 }

@@ -1,237 +1,10 @@
-#' Film Pacing and Rhythm Analysis
+#' Camera Angle Classification
 #'
-#' Functions for analyzing film editing pace, rhythm, and shot patterns.
-#' These functions aggregate shot-level data into film-level metrics.
+#' Functions for classifying camera angle from frame images.
 #'
-#' @name film_metrics
+#' @name camera_angle
 #' @keywords internal
 NULL
-
-#' Compute Average Shot Length (ASL)
-#'
-#' Calculate pacing metrics from a shots tibble. ASL is a fundamental measure
-#' of editing pace in film analysis.
-#'
-#' ## What is ASL? (ELI5)
-#'
-#' ASL tells you how fast a film is cut. A low ASL (like 2 seconds) means
-#' lots of quick cuts (action movie). A high ASL (like 10+ seconds) means
-#' longer, lingering shots (art film).
-#'
-#' @param shots A tibble with shot data containing a `duration` column.
-#'   Typically from [video_extract_shots()] or [detect_shot_changes()].
-#'
-#' @return A tibble with one row containing:
-#'   - `asl`: Average Shot Length in seconds.
-#'
-#'   - `asl_median`: Median shot length (less affected by outliers).
-#'
-#'   - `asl_std`: Standard deviation of shot lengths.
-#'
-#'   - `shot_count`: Total number of shots.
-#'
-#'   - `total_duration`: Total film/sequence duration.
-#'
-#'   - `shortest_shot`: Duration of shortest shot.
-#'
-#'   - `longest_shot`: Duration of longest shot.
-#'
-#'   - `shots_per_minute`: Average cuts per minute.
-#'
-#' @details
-#' **Academic context:**
-#' ASL was popularized by Barry Salt's film style analysis. The Cinemetrics
-#' project (cinemetrics.lv) has collected ASL data for thousands of films.
-#'
-#' **Typical values:**
-#' - Modern action film: ASL ~2-3 seconds
-#' - Classic Hollywood: ASL ~6-8 seconds
-#' - Art house/documentary: ASL ~12+ seconds
-#' - Michael Bay films: ASL ~2 seconds
-#' - Hitchcock: ASL ~8-10 seconds
-#'
-#' @references
-#' Salt, B. (2009). Film Style and Technology: History and Analysis.
-#' Cinemetrics project: <https://www.cinemetrics.lv/>
-#'
-#' @family film_metrics
-#' @export
-#' @examples
-#' \dontrun{
-#' shots <- video_extract_shots("film.mp4")
-#' film_compute_asl(shots)
-#' }
-film_compute_asl <- function(shots) {
-  if (!"duration" %in% names(shots)) {
-    cli::cli_abort(
-      "Input must have a {.field duration} column. Use {.fn video_extract_shots} first."
-    )
-  }
-
-  durations <- shots$duration
-  n <- length(durations)
-  total <- sum(durations, na.rm = TRUE)
-
-  tibble::tibble(
-    asl = mean(durations, na.rm = TRUE),
-    asl_median = stats::median(durations, na.rm = TRUE),
-    asl_std = stats::sd(durations, na.rm = TRUE),
-    shot_count = n,
-    total_duration = total,
-    shortest_shot = min(durations, na.rm = TRUE),
-    longest_shot = max(durations, na.rm = TRUE),
-    shots_per_minute = n / (total / 60)
-  )
-}
-
-#' Compute Shot Rhythm Metrics
-#'
-#' Analyze the pattern and regularity of editing rhythm.
-#'
-#' ## What is editing rhythm? (ELI5)
-#'
-#' Beyond just "how fast," rhythm describes the *pattern* of editing.
-#' Is it steady like a metronome, or unpredictable like jazz?
-#' This tells you if the editor is building tension or keeping things calm.
-#'
-#' @param shots A tibble with shot data containing a `duration` column.
-#'
-#' @return A tibble with one row containing:
-#'   - `rhythm_entropy`: Evenness of the shot-duration distribution (0-1,
-#'     higher = more uniform screen time across shots). Not a measure of
-#'     temporal ordering.
-#'
-#'   - `rhythm_regularity`: How consistent shot lengths are (0-1, higher = more regular).
-#'
-#'   - `rhythm_acceleration`: Is cutting speeding up (positive) or slowing (negative)?
-#'
-#'   - `rhythm_range_ratio`: Ratio of longest to shortest shot.
-#'
-#'   - `rhythm_quartile_25`: 25th percentile shot duration.
-#'
-#'   - `rhythm_quartile_75`: 75th percentile shot duration.
-#'
-#' @details
-#' **Interpretation:**
-#' - High regularity + low entropy = Metronomic editing (music videos, TV shows).
-#' - Low regularity + high entropy = Uneven shot durations (experimental, avant-garde).
-#' - Positive acceleration = Building toward climax.
-#' - Negative acceleration = Winding down.
-#'
-#' @family film_metrics
-#' @export
-#' @examples
-#' \dontrun{
-#' shots <- video_extract_shots("film.mp4")
-#' film_compute_rhythm(shots)
-#' }
-film_compute_rhythm <- function(shots) {
-  if (!"duration" %in% names(shots)) {
-    cli::cli_abort(
-      "Input must have a {.field duration} column. Use {.fn video_extract_shots} first."
-    )
-  }
-
-  durations <- shots$duration
-  n <- length(durations)
-
-  if (n < 2) {
-    cli::cli_warn("Need at least 2 shots for rhythm analysis.")
-    return(tibble::tibble(
-      rhythm_entropy = NA_real_,
-      rhythm_regularity = NA_real_,
-      rhythm_acceleration = NA_real_,
-      rhythm_range_ratio = NA_real_,
-      rhythm_quartile_25 = NA_real_,
-      rhythm_quartile_75 = NA_real_
-    ))
-  }
-
-  # Normalize durations to probabilities for entropy
-  p <- durations / sum(durations, na.rm = TRUE)
-  p <- p[p > 0]  # Avoid log(0)
-
-  # Shannon entropy (normalized to 0-1)
-  entropy_raw <- -sum(p * log2(p))
-  max_entropy <- log2(n)  # Maximum possible entropy for n shots
-  rhythm_entropy <- entropy_raw / max_entropy
-
-  # Regularity (coefficient of variation inverted)
-  cv <- stats::sd(durations, na.rm = TRUE) / mean(durations, na.rm = TRUE)
-  rhythm_regularity <- 1 / (1 + cv)
-
-  # Acceleration (slope of shot lengths over time)
-  # Positive = getting faster (shorter shots), Negative = getting slower
-  if (n >= 3) {
-    # Fit linear model to shot durations
-    fit <- stats::lm(durations ~ seq_along(durations))
-    rhythm_acceleration <- -stats::coef(fit)[2]  # Negate so positive = faster cutting
-  } else {
-    rhythm_acceleration <- durations[1] - durations[n]  # Simple difference
-  }
-
-  tibble::tibble(
-    rhythm_entropy = rhythm_entropy,
-    rhythm_regularity = rhythm_regularity,
-    rhythm_acceleration = as.numeric(rhythm_acceleration),
-    rhythm_range_ratio = max(durations, na.rm = TRUE) / min(durations, na.rm = TRUE),
-    rhythm_quartile_25 = stats::quantile(durations, 0.25, na.rm = TRUE),
-    rhythm_quartile_75 = stats::quantile(durations, 0.75, na.rm = TRUE)
-  )
-}
-
-#' Summarize Shot Scale Distribution
-#'
-#' Count and summarize the distribution of shot scales (ECU, CU, MS, etc.).
-#'
-#' ## What is shot scale distribution? (ELI5)
-#'
-#' This tells you what kinds of shots a film uses most. Does it prefer
-#' close-ups (intimate, emotional) or wide shots (epic, environmental)?
-#'
-#' @param shots A tibble with shot data containing a `shot_scale` column.
-#'   Typically from [video_extract_shots()] or [film_classify_scale()].
-#'
-#' @return A tibble with one row per shot scale containing:
-#'   - `shot_scale`: Shot scale code (ECU, CU, MCU, MS, CS, MFS, FS, WS, EWS).
-#'
-#'   - `count`: Number of shots at this scale.
-#'
-#'   - `proportion`: Fraction of total shots.
-#'
-#'   - `pct`: Percentage of total shots.
-#'
-#' @family film_metrics
-#' @export
-#' @examples
-#' \dontrun{
-#' shots <- video_extract_shots("film.mp4")
-#' film_summarize_scales(shots)
-#' }
-film_summarize_scales <- function(shots) {
-  if (!"shot_scale" %in% names(shots)) {
-    cli::cli_abort(
-      "Input must have a {.field shot_scale} column. Use {.fn video_extract_shots} or {.fn film_classify_scale} first."
-    )
-  }
-
-  # Define scale order for proper sorting (tight to wide)
-  # StudioBinder's 9 standard cinematography shot scales
-  scale_order <- c("ECU", "CU", "MCU", "MS", "CS", "MFS", "FS", "WS", "EWS")
-
-  result <- shots |>
-    dplyr::count(.data$shot_scale, name = "count") |>
-    dplyr::mutate(
-      proportion = .data$count / sum(.data$count),
-      pct = .data$proportion * 100,
-      shot_scale = factor(.data$shot_scale, levels = scale_order)
-    ) |>
-    dplyr::arrange(.data$shot_scale) |>
-    dplyr::mutate(shot_scale = as.character(.data$shot_scale))
-  
-  result
-}
-
 
 #' Classify camera angle
 #'
@@ -249,7 +22,7 @@ film_summarize_scales <- function(shots) {
 #' | **birds_eye** | Directly overhead | Very high horizon or no horizon visible |
 #' | **worms_eye** | Directly from below | Very low/no horizon, extreme upward |
 #'
-#' @param tl_images A tl_images tibble
+#' @param tl_frames A tl_frames tibble
 #' @param downsample Maximum side length for analysis. Default 300.
 #'
 #' @return The input tibble with added columns:
@@ -263,24 +36,22 @@ film_summarize_scales <- function(shots) {
 #' - Low angles tend to show more sky (horizon low)
 #' - Dutch angles have tilted horizontal lines
 #'
-#' For more accurate detection, consider using the VLM functions to classify angles.
-#'
 #' @export
-film_classify_angle <- function(tl_images, downsample = 300) {
+frame_classify_angle <- function(tl_frames, downsample = 300) {
   # Validate input
-  if (!inherits(tl_images, "data.frame")) {
-    cli::cli_abort("{.arg tl_images} must be a data frame.")
+  if (!inherits(tl_frames, "data.frame")) {
+    cli::cli_abort("{.arg tl_frames} must be a data frame.")
   }
-  if (!"local_path" %in% names(tl_images)) {
-    cli::cli_abort("{.arg tl_images} must have a {.field local_path} column.")
+  if (!"local_path" %in% names(tl_frames)) {
+    cli::cli_abort("{.arg tl_frames} must have a {.field local_path} column.")
   }
   
-  n <- nrow(tl_images)
+  n <- nrow(tl_frames)
   if (n == 0) {
-    tl_images$camera_angle <- character(0)
-    tl_images$horizon_position <- numeric(0)
-    tl_images$tilt_angle <- numeric(0)
-    return(tl_images)
+    tl_frames$camera_angle <- character(0)
+    tl_frames$horizon_position <- numeric(0)
+    tl_frames$tilt_angle <- numeric(0)
+    return(tl_frames)
   }
   
   # Initialize result vectors
@@ -291,7 +62,7 @@ film_classify_angle <- function(tl_images, downsample = 300) {
   cli::cli_progress_bar("Classifying camera angles", total = n)
   
   for (i in seq_len(n)) {
-    img_path <- tl_images$local_path[i]
+    img_path <- tl_frames$local_path[i]
     
     if (!file.exists(img_path)) {
       camera_angles[i] <- NA_character_
@@ -327,20 +98,14 @@ film_classify_angle <- function(tl_images, downsample = 300) {
       
       nr <- nrow(mat)
       nc <- ncol(mat)
-      
-      # Compute gradient
-      gx <- mat
-      gy <- mat
-      if (nc > 1) {
-        gx[, -1] <- mat[, -1] - mat[, -nc]
-        gx[, 1] <- 0
-      }
-      if (nr > 1) {
-        gy[-1, ] <- mat[-1, ] - mat[-nr, ]
-        gy[1, ] <- 0
-      }
-      
-      grad_mag <- sqrt(gx^2 + gy^2)
+
+      # Compute gradient (need components for edge direction, not just magnitude)
+      g <- grad_xy(mat)
+      gx <- g$gx
+      gy <- g$gy
+
+      grad_mag <- sqrt(as.numeric(gx)^2 + as.numeric(gy)^2)
+      dim(grad_mag) <- c(nrow(mat), ncol(mat))
       
       # Find strong edges
       threshold <- mean(grad_mag) + 1.5 * stats::sd(grad_mag)
@@ -427,9 +192,9 @@ film_classify_angle <- function(tl_images, downsample = 300) {
   cli::cli_progress_done()
   
   # Add columns
-  tl_images$camera_angle <- camera_angles
-  tl_images$horizon_position <- horizon_positions
-  tl_images$tilt_angle <- tilt_angles
+  tl_frames$camera_angle <- camera_angles
+  tl_frames$horizon_position <- horizon_positions
+  tl_frames$tilt_angle <- tilt_angles
   
-  tl_images
+  tl_frames
 }

@@ -6,3 +6,6 @@
 ^docs$
 ^joss-release-schedule\.md$
 ^tools$
+^\.agents$
+^.*\.tar\.gz$
+^\.DS_Store$

@@ -2,7 +2,7 @@
 
 # Train a classical Random Forest classifier for shot scale on the CineScale
 # benchmark, using engineered features (spectral residual saliency, face
-# coverage, skin tone, geometric and texture cues) following Canini, Benini
+# coverage, geometric and texture cues) following Canini, Benini
 # & Leonardi (2011) and Hou & Zhang (2007).
 #
 # Input:  sampled CineScale frames + frame_level_results.csv
@@ -125,10 +125,51 @@ extract_features_batch <- function(paths) {
   feat_list
 }
 
+extract_bbox_features_batch <- function(paths) {
+  n <- length(paths)
+  workers <- max(1L, parallel::detectCores() - 1L)
+  cat(sprintf("Using %d worker cores for saliency bbox extraction...\n", workers))
+  parallel::mclapply(seq_len(n), function(i) {
+    tryCatch({
+      img <- magick::image_read(paths[i])
+      geo <- geometric_features(img)
+      geo[c("salience_bbox_width", "salience_bbox_height",
+            "salience_bbox_area", "salience_bbox_aspect")]
+    }, error = function(e) NULL)
+  }, mc.cores = workers, mc.preschedule = TRUE)
+}
+
+augment_bbox_features <- function(all_features, paths) {
+  bbox <- extract_bbox_features_batch(paths)
+  Map(function(f, b) {
+    if (is.null(f) || is.null(b)) return(f)
+    f[setdiff(names(b), names(f))] <- b[setdiff(names(b), names(f))]
+    f
+  }, all_features, bbox)
+}
+
 # Cache features to avoid recomputing across runs
+expected_feature_names <- names(extract_shot_scale_features(
+  magick::image_read(annotations$resolved_path[1])
+))
 if (file.exists(FEATURE_CACHE)) {
   cat("Loading cached features...\n")
   all_features <- readRDS(FEATURE_CACHE)
+  valid_idx <- which(!vapply(all_features, is.null, logical(1)))[1]
+  cached_names <- make.unique(sub("\\..*$", "", names(all_features[[valid_idx]])), sep = "_")
+  if (!identical(cached_names, expected_feature_names)) {
+    missing_names <- setdiff(expected_feature_names, cached_names)
+    if (all(missing_names %in% c("salience_bbox_width", "salience_bbox_height",
+                                "salience_bbox_area", "salience_bbox_aspect"))) {
+      cat("Cached feature schema is missing saliency bbox fields; augmenting...\n")
+      all_features <- augment_bbox_features(all_features, annotations$resolved_path)
+    } else {
+      cat("Cached feature schema is stale; recomputing...\n")
+      all_features <- extract_features_batch(annotations$resolved_path)
+    }
+    saveRDS(all_features, FEATURE_CACHE)
+    cat("Cached features to", FEATURE_CACHE, "\n")
+  }
 } else {
   cat("Extracting features for", nrow(annotations), "frames...\n")
   all_features <- extract_features_batch(annotations$resolved_path)
@@ -150,6 +191,7 @@ clean_names <- sub("\\..*$", "", colnames(feature_mat))
 clean_names <- make.unique(clean_names, sep = "_")
 colnames(feature_mat) <- clean_names
 feature_df <- as.data.frame(feature_mat)
+feature_df <- dplyr::select(feature_df, -dplyr::any_of(c("skin_tone", "skin_center")))
 feature_df$class_3 <- annotations$class_3
 feature_df$film    <- annotations$film
 feature_df$director <- annotations$director

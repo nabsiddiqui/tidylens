@@ -2,5 +2,8 @@
 /Meta/
 tidylens.Rcheck/
 tidylens_*.tar.gz
+*.tar.gz
+tools/*.rds
+.DS_Store
 .Rhistory
 .RData

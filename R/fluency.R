@@ -10,7 +10,7 @@ NULL
 #'
 #' Compute processing fluency metrics based on imagefluency package methodology.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param downsample Maximum side length for analysis. Default 200.
 #'
 #' @return The input tibble with added columns:
@@ -24,10 +24,10 @@ NULL
 #'
 #' @family fluency
 #' @export
-extract_fluency_metrics <- function(tl_images, downsample = 200) {
-  validate_tl_images(tl_images)
+frame_extract_fluency_metrics <- function(tl_frames, downsample = 200) {
+  validate_tl_frames(tl_frames)
   
-  results <- map_images(tl_images, function(img) {
+  results <- map_images(tl_frames, function(img) {
     # Convert to grayscale matrix
     gray <- magick::image_convert(img, colorspace = "gray")
     data <- as.integer(magick::image_data(gray))
@@ -94,14 +94,14 @@ extract_fluency_metrics <- function(tl_images, downsample = 200) {
     )
   }, downsample = downsample, msg = "Extracting fluency metrics")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
 
 #' Compute rule of thirds adherence
 #'
 #' Measure how well the image follows the rule of thirds composition.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param downsample Maximum side length for analysis. Default 200.
 #'
 #' @return The input tibble with added column:
@@ -109,10 +109,10 @@ extract_fluency_metrics <- function(tl_images, downsample = 200) {
 #'
 #' @family fluency
 #' @export
-extract_rule_of_thirds <- function(tl_images, downsample = 200) {
-  validate_tl_images(tl_images)
+frame_extract_rule_of_thirds <- function(tl_frames, downsample = 200) {
+  validate_tl_frames(tl_frames)
   
-  results <- map_images(tl_images, function(img) {
+  results <- map_images(tl_frames, function(img) {
     # Use gradient magnitude as a proxy for visual interest
     gray <- magick::image_convert(img, colorspace = "gray")
     data <- as.integer(magick::image_data(gray))
@@ -130,18 +130,8 @@ extract_rule_of_thirds <- function(tl_images, downsample = 200) {
     if (nr < 3 || nc < 3) {
       return(list(rule_of_thirds = NA_real_))
     }
-    
-    # Calculate gradient magnitude
-    gx <- mat
-    gx[, -1] <- mat[, -1] - mat[, -nc]
-    gx[, 1] <- 0
-    
-    gy <- mat
-    gy[-1, ] <- mat[-1, ] - mat[-nr, ]
-    gy[1, ] <- 0
-    
-    grad_mag <- sqrt(as.numeric(gx)^2 + as.numeric(gy)^2)
-    dim(grad_mag) <- c(nr, nc)
+
+    gm <- grad_mag(mat)
     
     # Rule of thirds lines
     third_rows <- round(c(nr/3, 2*nr/3))
@@ -165,13 +155,13 @@ extract_rule_of_thirds <- function(tl_images, downsample = 200) {
       c1 <- max(1, pp[2] - window_size)
       c2 <- min(nc, pp[2] + window_size)
       
-      power_strength <- power_strength + mean(grad_mag[r1:r2, c1:c2])
+      power_strength <- power_strength + mean(gm[r1:r2, c1:c2])
     }
-    
+
     power_strength <- power_strength / 4
-    
+
     # Compare to overall gradient
-    overall_strength <- mean(grad_mag)
+    overall_strength <- mean(gm)
     
     # Rule of thirds score
     score <- if (overall_strength > 0) {
@@ -183,14 +173,14 @@ extract_rule_of_thirds <- function(tl_images, downsample = 200) {
     list(rule_of_thirds = score)
   }, downsample = downsample, msg = "Computing rule of thirds")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
 
 #' Extract visual complexity
 #'
 #' Compute visual complexity using multiple measures.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param downsample Maximum side length for analysis. Default 200.
 #'
 #' @return The input tibble with added column:
@@ -198,10 +188,10 @@ extract_rule_of_thirds <- function(tl_images, downsample = 200) {
 #'
 #' @family fluency
 #' @export
-extract_visual_complexity <- function(tl_images, downsample = 200) {
-  validate_tl_images(tl_images)
+frame_extract_visual_complexity <- function(tl_frames, downsample = 200) {
+  validate_tl_frames(tl_frames)
   
-  results <- map_images(tl_images, function(img) {
+  results <- map_images(tl_frames, function(img) {
     gray <- magick::image_convert(img, colorspace = "gray")
     data <- as.integer(magick::image_data(gray))
     
@@ -223,16 +213,7 @@ extract_visual_complexity <- function(tl_images, downsample = 200) {
     
     # 2. Edge density component (0-1)
     if (nr >= 3 && nc >= 3) {
-      gx <- mat
-      gx[, -1] <- mat[, -1] - mat[, -nc]
-      gx[, 1] <- 0
-      
-      gy <- mat
-      gy[-1, ] <- mat[-1, ] - mat[-nr, ]
-      gy[1, ] <- 0
-      
-      grad_mag <- sqrt(as.numeric(gx)^2 + as.numeric(gy)^2)
-      edge_density <- mean(grad_mag > 0.1)  # Threshold on 0-1 gradient
+      edge_density <- mean(grad_mag(mat) > 0.1)  # Threshold on 0-1 gradient
     } else {
       edge_density <- 0
     }
@@ -246,7 +227,7 @@ extract_visual_complexity <- function(tl_images, downsample = 200) {
     list(visual_complexity = complexity)
   }, downsample = downsample, msg = "Extracting visual complexity")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
 
 #' Analyze center bias
@@ -254,7 +235,7 @@ extract_visual_complexity <- function(tl_images, downsample = 200) {
 #' Measure how much visual activity is concentrated in the center of the image.
 #' Center bias is common in film and photography compositions.
 #'
-#' @param tl_images A tl_images tibble.
+#' @param tl_frames A tl_frames tibble.
 #' @param center_ratio Size of center region relative to image. Default 0.5 (central 50%).
 #' @param downsample Maximum side length for analysis. Default 200.
 #'
@@ -266,10 +247,10 @@ extract_visual_complexity <- function(tl_images, downsample = 200) {
 #'
 #' @family fluency
 #' @export
-extract_center_bias <- function(tl_images, center_ratio = 0.5, downsample = 200) {
-  validate_tl_images(tl_images)
+frame_extract_center_bias <- function(tl_frames, center_ratio = 0.5, downsample = 200) {
+  validate_tl_frames(tl_frames)
   
-  results <- map_images(tl_images, function(img) {
+  results <- map_images(tl_frames, function(img) {
     gray <- magick::image_convert(img, colorspace = "gray")
     data <- as.integer(magick::image_data(gray))
     
@@ -301,18 +282,10 @@ extract_center_bias <- function(tl_images, center_ratio = 0.5, downsample = 200)
     
     # Gradient/salience analysis
     if (nr >= 3 && nc >= 3) {
-      gx <- mat
-      gx[, -1] <- mat[, -1] - mat[, -nc]
-      gx[, 1] <- 0
-      
-      gy <- mat
-      gy[-1, ] <- mat[-1, ] - mat[-nr, ]
-      gy[1, ] <- 0
-      
-      grad_mag <- sqrt(gx^2 + gy^2)
-      
-      center_salience <- mean(grad_mag[center_mask])
-      peripheral_salience <- mean(grad_mag[!center_mask])
+      gm <- grad_mag(mat)
+
+      center_salience <- mean(gm[center_mask])
+      peripheral_salience <- mean(gm[!center_mask])
       
       center_bias <- if (peripheral_salience > 0) {
         center_salience / peripheral_salience
@@ -332,5 +305,5 @@ extract_center_bias <- function(tl_images, center_ratio = 0.5, downsample = 200)
     )
   }, downsample = downsample, msg = "Analyzing center bias")
   
-  bind_results(tl_images, results)
+  bind_results(tl_frames, results)
 }
