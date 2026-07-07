@@ -1,13 +1,13 @@
 Package: tidylens
 Title: Classical Film-Frame Analysis in R
-Version: 3.1.0
+Version: 3.3.0
 Author: Nabeel Siddiqui [aut, cre]
 Maintainer: Nabeel Siddiqui <nabeel@example.com>
 Description: A tidy, pipeable toolkit for classical film-frame analysis in R.
     Provides functions for extracting frames and shots from video files,
     computing inspectable visual features and vector representations, and
-    classifying shot scale and camera angle. All analysis runs locally
-    without CNNs, cloud APIs, opaque model services, or Python workflows.
+    classifying shot scale. All analysis runs locally without CNNs, cloud
+    APIs, opaque model services, or Python workflows.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

@@ -33,9 +33,9 @@ downsample_image <- function(img, max_side = 200) {
 #' Gradient components of a grayscale matrix
 #'
 #' Finite-difference Sobel-free gradient (forward difference, zero border).
-#' Returns both components so callers that need edge direction (e.g.
-#' `frame_classify_angle`) don't have to recompute them. `grad_mag()` below
-#' derives magnitude from the same components.
+#' Returns both components so callers that need edge direction (e.g. texture
+#' features) don't have to recompute them. `grad_mag()` below derives
+#' magnitude from the same components.
 #'
 #' @param mat Numeric/integer matrix (grayscale).
 #' @return List with `gx` and `gy`, each same dims as `mat`.

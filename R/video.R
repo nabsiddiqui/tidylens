@@ -29,15 +29,15 @@ NULL
 #' @examples
 #' \dontrun{
 #' # Extract one frame every 5 seconds
-#' frames <- frame_extract_by_seconds("video.mp4", every = 5)
+#' frames <- video_extract_frames_by_seconds("video.mp4", every = 5)
 #'
 #' # Extract one frame per second
-#' frames <- frame_extract_by_seconds("video.mp4", every = 1)
+#' frames <- video_extract_frames_by_seconds("video.mp4", every = 1)
 #'
 #' # Extract from multiple videos
-#' frames <- frame_extract_by_seconds(c("video1.mp4", "video2.mp4"), every = 2)
+#' frames <- video_extract_frames_by_seconds(c("video1.mp4", "video2.mp4"), every = 2)
 #' }
-frame_extract_by_seconds <- function(video_path,
+video_extract_frames_by_seconds <- function(video_path,
                                  every = 1,
                                  output_dir = tempdir(),
                                  fps = NULL,
@@ -67,7 +67,7 @@ frame_extract_by_seconds <- function(video_path,
     all_frames <- lapply(seq_along(video_path), function(i) {
       vp <- video_path[i]
       pfx <- paste0(prefix, "_v", i)
-      frame_extract_by_seconds(
+      video_extract_frames_by_seconds(
         vp,
         output_dir = output_dir,
         fps = fps,
@@ -297,7 +297,7 @@ video_get_info <- function(video_path) {
 #'
 #' @family video
 #' @export
-frame_extract_evenly <- function(video_path,
+video_extract_frames_evenly <- function(video_path,
                                 n = 10,
                                 output_dir = tempdir(),
                                 format = "jpg") {
@@ -306,7 +306,7 @@ frame_extract_evenly <- function(video_path,
   # Calculate fps to match approximately n frames
   fps_needed <- n / info$duration
 
-  frames <- frame_extract_by_seconds(
+  frames <- video_extract_frames_by_seconds(
     video_path,
     output_dir = output_dir,
     fps = fps_needed,
@@ -581,7 +581,6 @@ build_shots <- function(cuts, n, frames) {
 #' @param output_dir Directory for temporary frames. Default `tempdir()`.
 #' @param position Which frame to keep for each shot: `"first"`, `"middle"`,
 #'   or `"last"`. Default `"middle"`.
-#' @param include_style Whether to classify shot scale (ECU, CU, etc.). Default `TRUE`.
 #'
 #' @return A tibble with one row per shot containing:
 #'   - `shot_id`: Sequential shot number.
@@ -598,12 +597,9 @@ build_shots <- function(cuts, n, frames) {
 #'
 #'   - `n_frames`: Number of frames in shot.
 #'
-#'   - `shot_scale`: Broad shot scale group: Close, Medium, or Long
-#'     (if include_style = TRUE).
-#'
-#'   - `shot_scale_confidence`: Random Forest class probability for the predicted shot scale.
-#'
 #'   - `frame_path`: Path to representative frame image.
+#'
+#'   To classify shot scale, pipe the result into [frame_classify_scale()].
 #'
 #' @details
 #' The shot detection algorithm is forwarded to [detect_shot_changes()]; see
@@ -618,7 +614,7 @@ build_shots <- function(cuts, n, frames) {
 #'
 #' @family video
 #' @export
-frame_extract_shots <- function(video_path,
+video_extract_shots <- function(video_path,
                                 fps = 2,
                                 method = c("adaptive", "content", "histogram"),
                                 threshold = 0.5,
@@ -627,13 +623,12 @@ frame_extract_shots <- function(video_path,
                                 min_content_val = 15,
                                 min_scene_len = NULL,
                                 output_dir = tempdir(),
-                                position = "middle",
-                                include_style = TRUE) {
+                                position = "middle") {
 
   # Handle multiple videos
   if (length(video_path) > 1) {
     all_shots <- lapply(video_path, function(vp) {
-      frame_extract_shots(
+      video_extract_shots(
         vp,
         fps = fps,
         method = method,
@@ -643,8 +638,7 @@ frame_extract_shots <- function(video_path,
         min_content_val = min_content_val,
         min_scene_len = min_scene_len,
         output_dir = output_dir,
-        position = position,
-        include_style = include_style
+        position = position
       )
     })
     result <- dplyr::bind_rows(all_shots)
@@ -663,7 +657,7 @@ frame_extract_shots <- function(video_path,
   cli::cli_alert_info("Video: {round(duration, 1)}s at {round(video_fps, 1)} fps")
 
   # Extract frames at specified analysis fps
-  frames <- frame_extract_by_seconds(video_path, output_dir = output_dir, fps = fps)
+  frames <- video_extract_frames_by_seconds(video_path, output_dir = output_dir, fps = fps)
 
   # Detect shot changes
   method <- match.arg(method)
@@ -705,20 +699,9 @@ frame_extract_shots <- function(video_path,
   # Get the representative frame's tl_frames data
   shot_frames <- frames[frame_indices, ]
 
-  # Classify shot styles if requested
-  if (include_style) {
-    shot_frames <- frame_classify_scale(shot_frames)
-    shots$shot_scale <- shot_frames$shot_scale
-    shots$shot_scale_confidence <- shot_frames$shot_scale_confidence
-  }
-  
   # Combine representative frame's tl_frames columns with shot timing columns
   shot_cols <- shots[, c("shot_id", "start_time", "end_time", "duration",
                          "start_frame", "end_frame", "n_frames")]
-  if (include_style) {
-    shot_cols$shot_scale <- shots$shot_scale
-    shot_cols$shot_scale_confidence <- shots$shot_scale_confidence
-  }
   result <- dplyr::bind_cols(
     shot_frames,
     tibble::tibble(video_source = video_source_path),
@@ -826,9 +809,9 @@ frame_classify_scale <- function(tl_frames) {
 #'
 #' ## Keyframes vs shot frames (ELI5)
 #'
-#' - `frame_extract_shots()` runs tidylens's own shot detection and picks one
+#' - `video_extract_shots()` runs tidylens's own shot detection and picks one
 #'   representative frame per detected shot. Slow, semantic.
-#' - `frame_extract_keyframes()` reads the encoder's pre-existing I-frames
+#' - `video_extract_keyframes()` reads the encoder's pre-existing I-frames
 #'   straight from the file. Fast, no shot detection, but the positions are
 #'   decided by the codec (typically every 1-2 seconds), not by content.
 #'
@@ -852,9 +835,9 @@ frame_classify_scale <- function(tl_frames) {
 #' @export
 #' @examples
 #' \dontrun{
-#' keyframes <- frame_extract_keyframes("film.mp4")
+#' keyframes <- video_extract_keyframes("film.mp4")
 #' }
-frame_extract_keyframes <- function(video_path,
+video_extract_keyframes <- function(video_path,
                                      output_dir = tempdir(),
                                      format = "jpg",
                                      prefix = "keyframe") {
@@ -867,7 +850,7 @@ frame_extract_keyframes <- function(video_path,
   # Handle multiple videos
   if (length(video_path) > 1) {
     all_kf <- lapply(seq_along(video_path), function(i) {
-      frame_extract_keyframes(
+      video_extract_keyframes(
         video_path[i],
         output_dir = output_dir,
         format = format,

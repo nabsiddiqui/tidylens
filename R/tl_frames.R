@@ -1,7 +1,7 @@
 #' Load frame files into a tl_frames tibble
 #'
 #' Internal helper used by video frame extractors. The public API starts from
-#' video files with `frame_extract_*()` functions.
+#' video files with `video_extract_*()` functions.
 #'
 #' @param paths Character vector of image file paths. Length-0 is allowed and
 #'   returns an empty `tl_frames` tibble. Nonexistent paths are dropped.
@@ -146,7 +146,7 @@ is_tl_frames <- function(x) {
 #' @noRd
 validate_tl_frames <- function(tl_frames) {
   if (!is_tl_frames(tl_frames)) {
-    cli::cli_abort("Input must be a tl_frames tibble. Use a frame_extract_*() function to build one from a video first.")
+    cli::cli_abort("Input must be a tl_frames tibble. Use a video_extract_*() function to build one from a video first.")
   }
 
   required_cols <- c("id", "local_path")

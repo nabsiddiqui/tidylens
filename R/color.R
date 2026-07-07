@@ -23,7 +23,7 @@ NULL
 #' @export
 #' @examples
 #' \dontrun{
-#' frames <- frame_extract_by_seconds("film.mp4", every = 5) |>
+#' frames <- video_extract_frames_by_seconds("film.mp4", every = 5) |>
 #'   frame_extract_brightness()
 #' }
 frame_extract_brightness <- function(tl_frames, downsample = 200, method = "mean") {
@@ -566,7 +566,7 @@ frame_extract_hue_histogram <- function(tl_frames, n_bins = 12, downsample = 200
 #' @export
 #' @examples
 #' \dontrun{
-#' frames <- frame_extract_by_seconds("film.mp4", every = 5) |>
+#' frames <- video_extract_frames_by_seconds("film.mp4", every = 5) |>
 #'   frame_extract_color_moments()
 #' # Check if image leans warm (high r, low b)
 #' images$cm_r_mean > images$cm_b_mean

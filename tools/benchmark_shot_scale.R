@@ -32,7 +32,7 @@ devtools::load_all(tidylens_path, quiet = TRUE)
 
 RESULTS_DIR <- Sys.getenv(
   "CINESCALE_RESULTS_DIR",
-  "/Users/nabeel/GDrive/Spring 2026/Tidylens Software Submission/Tidylens SoftwareX Article/validation/osf_stratified_results"
+  ""
 )
 
 results_csv <- file.path(RESULTS_DIR, "frame_level_results.csv")

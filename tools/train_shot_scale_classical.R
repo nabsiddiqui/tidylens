@@ -13,8 +13,7 @@
 #
 # Env vars (optional):
 #   CINESCALE_RESULTS_DIR  directory containing frame_level_results.csv
-#                          and sampled_frames/  (default: the validation
-#                          folder used during SoftwareX preparation)
+#                          and sampled_frames/  (must be set by the user)
 #   SHOT_SCALE_WEIGHTS_OUT path to write the trained model
 #   SHOT_SCALE_SEED        random seed (default 42)
 
@@ -36,7 +35,7 @@ devtools::load_all(tidylens_path, quiet = TRUE)
 
 RESULTS_DIR <- Sys.getenv(
   "CINESCALE_RESULTS_DIR",
-  "/Users/nabeel/GDrive/Spring 2026/Tidylens Software Submission/Tidylens SoftwareX Article/validation/osf_stratified_results"
+  ""
 )
 WEIGHTS_OUT <- Sys.getenv(
   "SHOT_SCALE_WEIGHTS_OUT",

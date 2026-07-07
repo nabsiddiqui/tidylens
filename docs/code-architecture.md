@@ -18,8 +18,8 @@ Tidylens is an R package for classical film-frame analysis. The package turns vi
 | `R/tl_frames.R` | Internal constructor and validator for `tl_frames` |
 | `R/color.R` | Color feature extractors |
 | `R/fluency.R` | Composition and fluency feature extractors |
+| `R/texture.R` | GLCM, sharpness, contrast, and LBP texture feature extractors |
 | `R/detection.R` | Face detection |
-| `R/film_metrics.R` | Camera-angle classification |
 | `R/vector_representations.R` | Color-histogram vector representation |
 | `R/shot_scale_features.R` | Internal engineered features for shot scale |
 | `R/utils.R` | Shared helpers |
@@ -27,14 +27,15 @@ Tidylens is an R package for classical film-frame analysis. The package turns vi
 ## Pipeline
 
 ```r
-shots <- frame_extract_shots("film.mp4") |>
+shots <- video_extract_shots("film.mp4") |>
+  frame_classify_scale() |>
   frame_extract_colourfulness() |>
   frame_extract_fluency_metrics()
 ```
 
 ## Data Flow
 
-1. `frame_extract_*()` writes frame files and returns `tl_frames`.
+1. `video_extract_*()` writes frame files and returns `tl_frames`.
 2. Per-frame functions validate `tl_frames`, read `local_path`, compute features, and bind result columns.
 3. Shot-level extractors add timing columns (`start_time`, `end_time`, `duration`) and a representative frame per shot.
 

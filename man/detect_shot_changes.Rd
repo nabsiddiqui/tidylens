@@ -87,11 +87,11 @@ Lienhart, R. (2001). Reliable Transition Detection in Videos.
 }
 \seealso{
 Other video: 
-\code{\link{frame_extract_by_seconds}()},
-\code{\link{frame_extract_evenly}()},
-\code{\link{frame_extract_keyframes}()},
-\code{\link{frame_extract_shots}()},
 \code{\link{video_download}()},
+\code{\link{video_extract_frames_by_seconds}()},
+\code{\link{video_extract_frames_evenly}()},
+\code{\link{video_extract_keyframes}()},
+\code{\link{video_extract_shots}()},
 \code{\link{video_get_info}()}
 }
 \concept{video}

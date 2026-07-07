@@ -27,15 +27,15 @@ install.packages("av")
 ```{r}
 library(tidylens)
 
-frames <- frame_extract_by_seconds("movie.mp4", every = 5)
+frames <- video_extract_frames_by_seconds("movie.mp4", every = 5)
 frames
 ```
 
 Other frame getters:
 
 ```{r}
-even_frames <- frame_extract_evenly("movie.mp4", n = 100)
-keyframes <- frame_extract_keyframes("movie.mp4")
+even_frames <- video_extract_frames_evenly("movie.mp4", n = 100)
+keyframes <- video_extract_keyframes("movie.mp4")
 ```
 
 `keyframes` are codec I-frames. They are useful for fast visual sampling, but they are not shot boundaries and do not carry shot durations.
@@ -43,19 +43,24 @@ keyframes <- frame_extract_keyframes("movie.mp4")
 ## Extract Shots
 
 ```{r}
-shots <- frame_extract_shots("movie.mp4")
+shots <- video_extract_shots("movie.mp4")
 ```
 
-Shot rows include `start_time`, `end_time`, `duration`, `shot_scale`, and `shot_scale_confidence`.
+Shot rows include `start_time`, `end_time`, and `duration`. To classify shot scale, pipe the result into `frame_classify_scale()`:
+
+```{r}
+shots <- shots |> frame_classify_scale()
+```
 
 ## Add Visual Features
 
-```{r}
+```r
 shots <- shots |>
   frame_extract_brightness() |>
   frame_extract_colourfulness() |>
   frame_extract_warmth() |>
   frame_extract_fluency_metrics() |>
+  frame_extract_glcm() |>
   frame_extract_color_histogram()
 ```
 
@@ -65,14 +70,16 @@ Common feature families:
 |--------|----------|
 | Color | `frame_extract_brightness()`, `frame_extract_colourfulness()`, `frame_extract_warmth()` |
 | Composition | `frame_extract_fluency_metrics()`, `frame_extract_rule_of_thirds()`, `frame_extract_center_bias()` |
+| Texture | `frame_extract_glcm()`, `frame_extract_sharpness()`, `frame_extract_contrast()` |
 | Detection | `frame_detect_faces()` |
-| Classification | `frame_classify_scale()`, `frame_classify_angle()` |
-| Vector representations | `frame_extract_color_histogram()` |
+| Classification | `frame_classify_scale()` |
+| Vector representations | `frame_extract_color_histogram()`, `frame_extract_lbp_histogram()` |
 
 ## Complete Pipeline
 
 ```{r}
-shots <- frame_extract_shots("movie.mp4") |>
+shots <- video_extract_shots("movie.mp4") |>
+  frame_classify_scale() |>
   frame_extract_colourfulness() |>
   frame_extract_warmth() |>
   frame_extract_fluency_metrics()
@@ -83,6 +90,6 @@ shots <- frame_extract_shots("movie.mp4") |>
 | Family | Functions |
 |--------|-----------|
 | Video | `video_download()`, `video_get_info()` |
-| Frame extraction | `frame_extract_by_seconds()`, `frame_extract_evenly()`, `frame_extract_keyframes()`, `frame_extract_shots()` |
-| Frame features | `frame_extract_*()`, `frame_detect_faces()`, `frame_classify_scale()`, `frame_classify_angle()` |
+| Video extraction | `video_extract_frames_by_seconds()`, `video_extract_frames_evenly()`, `video_extract_keyframes()`, `video_extract_shots()` |
+| Frame features | `frame_extract_*()`, `frame_detect_faces()`, `frame_classify_scale()` |
 | Utilities | `is_tl_frames()` |

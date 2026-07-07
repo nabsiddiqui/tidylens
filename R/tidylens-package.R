@@ -2,9 +2,9 @@
 #'
 #' A tidy, pipeable toolkit for classical film-frame analysis. Tidylens turns
 #' video files into `tl_frames` tibbles, extracts inspectable visual features
-#' and vector representations, and detects shots and classifies shot scale and
-#' camera angle. The default path uses no CNNs, cloud APIs, opaque model
-#' services, or Python workflows.
+#' and vector representations, and detects shots and classifies shot scale.
+#' The default path uses no CNNs, cloud APIs, opaque model services, or
+#' Python workflows.
 #'
 #' @keywords internal
 #'

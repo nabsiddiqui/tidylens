@@ -35,7 +35,7 @@ The default path uses no CNNs, no cloud APIs, and no opaque model services.
 ```r
 library(tidylens)
 
-frames <- frame_extract_by_seconds("movie.mp4", every = 5)
+frames <- video_extract_frames_by_seconds("movie.mp4", every = 5)
 #> tl_frames tibble: one row per extracted frame
 ```
 
@@ -48,29 +48,30 @@ frames <- frame_extract_by_seconds("movie.mp4", every = 5)
 video_get_info("movie.mp4")
 
 # Extract one frame every 5 seconds
-frames <- frame_extract_by_seconds("movie.mp4", every = 5)
+frames <- video_extract_frames_by_seconds("movie.mp4", every = 5)
 
 # Sample 100 evenly spaced frames
-frames <- frame_extract_evenly("movie.mp4", n = 100)
+frames <- video_extract_frames_evenly("movie.mp4", n = 100)
 
 # Pull encoder I-frames; fast, no shot detection
-keyframes <- frame_extract_keyframes("movie.mp4")
+keyframes <- video_extract_keyframes("movie.mp4")
 ```
 
-`frame_extract_by_seconds()`, `frame_extract_evenly()`, and `frame_extract_keyframes()` produce frame rows. These are useful for color, composition, face, camera-angle, and vector-representation features.
+`video_extract_frames_by_seconds()`, `video_extract_frames_evenly()`, and `video_extract_keyframes()` produce frame rows. These are useful for color, composition, face, texture, and vector-representation features.
 
 ---
 
 ## Shot Analysis
 
 ```r
-shots <- frame_extract_shots("movie.mp4")
-# columns include: shot_id, start_time, end_time, duration, shot_scale
+shots <- video_extract_shots("movie.mp4")
+# columns include: shot_id, start_time, end_time, duration
+
+# Optionally classify shot scale with a classical Random Forest
+shots <- shots |> frame_classify_scale()
 ```
 
-`frame_extract_shots()` detects shot boundaries and returns one representative frame per shot. Shot rows carry `duration`, `start_time`, and `end_time` for downstream pacing analysis you do yourself.
-
-Shot scale is classified with a classical Random Forest trained on engineered features: spectral residual saliency, face coverage, geometry, color, and texture. It runs locally on CPU and returns three broad classes: `Close`, `Medium`, and `Long`.
+`video_extract_shots()` detects shot boundaries and returns one representative frame per shot. Shot rows carry `duration`, `start_time`, and `end_time` for downstream pacing analysis you do yourself. Shot scale is a separate step: `frame_classify_scale()` runs a classical Random Forest on engineered features (spectral residual saliency, face coverage, geometry, color, texture) and adds `shot_scale` (`Close`, `Medium`, `Long`) plus `shot_scale_confidence`.
 
 ---
 
@@ -83,6 +84,8 @@ frames <- frames |>
   frame_extract_warmth() |>
   frame_extract_dominant_color() |>
   frame_extract_fluency_metrics() |>
+  frame_extract_glcm() |>
+  frame_extract_sharpness() |>
   frame_extract_color_histogram()
 ```
 
@@ -92,9 +95,10 @@ Selected feature families:
 |--------|----------|
 | Color | `frame_extract_brightness()`, `frame_extract_warmth()`, `frame_extract_hue_histogram()` |
 | Composition | `frame_extract_fluency_metrics()`, `frame_extract_rule_of_thirds()`, `frame_extract_center_bias()` |
+| Texture | `frame_extract_glcm()`, `frame_extract_sharpness()`, `frame_extract_contrast()` |
 | Detection | `frame_detect_faces()` |
-| Classification | `frame_classify_scale()`, `frame_classify_angle()` |
-| Vector representations | `frame_extract_color_histogram()` |
+| Classification | `frame_classify_scale()` |
+| Vector representations | `frame_extract_color_histogram()`, `frame_extract_lbp_histogram()` |
 
 ---
 
@@ -103,7 +107,8 @@ Selected feature families:
 ```r
 library(tidylens)
 
-shots <- frame_extract_shots("movie.mp4") |>
+shots <- video_extract_shots("movie.mp4") |>
+  frame_classify_scale() |>
   frame_extract_colourfulness() |>
   frame_extract_warmth() |>
   frame_extract_fluency_metrics()
@@ -115,15 +120,15 @@ shots <- frame_extract_shots("movie.mp4") |>
 
 ### Video
 
-`video_download()`, `video_get_info()`, `frame_extract_by_seconds()`, `frame_extract_evenly()`, `frame_extract_shots()`, `frame_extract_keyframes()`
+`video_download()`, `video_get_info()`, `video_extract_frames_by_seconds()`, `video_extract_frames_evenly()`, `video_extract_shots()`, `video_extract_keyframes()`
 
 ### Frame Features
 
-`frame_extract_brightness()`, `frame_extract_color_mean()`, `frame_extract_color_median()`, `frame_extract_color_mode()`, `frame_extract_saturation()`, `frame_extract_colourfulness()`, `frame_extract_warmth()`, `frame_extract_dominant_color()`, `frame_extract_color_variance()`, `frame_extract_color_moments()`, `frame_extract_hue_histogram()`, `frame_extract_fluency_metrics()`, `frame_extract_rule_of_thirds()`, `frame_extract_visual_complexity()`, `frame_extract_center_bias()`, `frame_extract_color_histogram()`
+`frame_extract_brightness()`, `frame_extract_color_mean()`, `frame_extract_color_median()`, `frame_extract_color_mode()`, `frame_extract_saturation()`, `frame_extract_colourfulness()`, `frame_extract_warmth()`, `frame_extract_dominant_color()`, `frame_extract_color_variance()`, `frame_extract_color_moments()`, `frame_extract_hue_histogram()`, `frame_extract_fluency_metrics()`, `frame_extract_rule_of_thirds()`, `frame_extract_visual_complexity()`, `frame_extract_center_bias()`, `frame_extract_glcm()`, `frame_extract_sharpness()`, `frame_extract_contrast()`, `frame_extract_color_histogram()`, `frame_extract_lbp_histogram()`
 
 ### Detection And Classification
 
-`frame_detect_faces()`, `frame_classify_scale()`, `frame_classify_angle()`
+`frame_detect_faces()`, `frame_classify_scale()`
 
 ### Utilities
 

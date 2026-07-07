@@ -14,7 +14,7 @@
 #   SHOT_SCALE_SAVE_BEST=1 Rscript tools/tune_shot_scale_rf.R  # also save
 #
 # Env vars:
-#   CINESCALE_RESULTS_DIR  validation folder (default: SoftwareX prep path)
+#   CINESCALE_RESULTS_DIR  validation folder (must be set by the user)
 #   SHOT_SCALE_SEED        random seed (default 42)
 #   SHOT_SCALE_SAVE_BEST   if "1", retrain best config and overwrite model
 
@@ -33,7 +33,7 @@ devtools::load_all(tidylens_path, quiet = TRUE)
 
 RESULTS_DIR <- Sys.getenv(
   "CINESCALE_RESULTS_DIR",
-  "/Users/nabeel/GDrive/Spring 2026/Tidylens Software Submission/Tidylens SoftwareX Article/validation/osf_stratified_results"
+  ""
 )
 SEED <- as.integer(Sys.getenv("SHOT_SCALE_SEED", "42"))
 FEATURE_CACHE <- file.path(tidylens_path, "tools", "shot_scale_classical_features.rds")

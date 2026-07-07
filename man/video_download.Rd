@@ -43,10 +43,10 @@ videos <- sapply(urls, video_download)
 \seealso{
 Other video: 
 \code{\link{detect_shot_changes}()},
-\code{\link{frame_extract_by_seconds}()},
-\code{\link{frame_extract_evenly}()},
-\code{\link{frame_extract_keyframes}()},
-\code{\link{frame_extract_shots}()},
+\code{\link{video_extract_frames_by_seconds}()},
+\code{\link{video_extract_frames_evenly}()},
+\code{\link{video_extract_keyframes}()},
+\code{\link{video_extract_shots}()},
 \code{\link{video_get_info}()}
 }
 \concept{video}

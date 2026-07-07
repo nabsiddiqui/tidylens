@@ -44,7 +44,7 @@ Skewness interpretation:
 }
 \examples{
 \dontrun{
-frames <- frame_extract_by_seconds("film.mp4", every = 5) |>
+frames <- video_extract_frames_by_seconds("film.mp4", every = 5) |>
   frame_extract_color_moments()
 # Check if image leans warm (high r, low b)
 images$cm_r_mean > images$cm_b_mean

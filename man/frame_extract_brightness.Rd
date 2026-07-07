@@ -25,7 +25,7 @@ Compute overall image brightness (mean pixel intensity).
 }
 \examples{
 \dontrun{
-frames <- frame_extract_by_seconds("film.mp4", every = 5) |>
+frames <- video_extract_frames_by_seconds("film.mp4", every = 5) |>
   frame_extract_brightness()
 }
 }
